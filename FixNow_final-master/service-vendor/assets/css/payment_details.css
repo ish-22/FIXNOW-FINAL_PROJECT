@@ -1,0 +1,143 @@
+    /* Updated section class */
+    .section-payment-details {
+        background: linear-gradient(135deg, #ADD8E6,rgb(255, 255, 255));
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        backdrop-filter: blur(8px);
+        margin-top: 40px;
+    }
+
+    /* Updated button class */
+    .payment-swap-btn {
+        background-color: rgba(76, 175, 80, 0.8);
+        color: white;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        margin-bottom: 30px;
+    }
+
+    .payment-swap-btn:hover {
+        background-color: rgba(76, 175, 80, 1);
+        transform: scale(1.1);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .payment-container {
+        width: 100%;
+        max-width: 1350px;
+        background-color: rgba(255, 255, 255, 0.6);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        backdrop-filter: blur(15px);
+        color: #333;
+        text-align: center;
+    }
+
+
+
+    .form-group select {
+        width: 100%; /* Make the select field take up the full width */
+        padding: 8px; /* Add padding for better visibility */
+        font-size: 16px; /* Adjust font size */
+        border: 1px solid #ccc; /* Border to match other input fields */
+        border-radius: 4px; /* Optional: Add border radius for a rounded look */
+    }
+
+
+/* Default styles for the pre tag */
+.payment-container pre {
+    font-size: 16px;
+    line-height: 1.5;
+    padding: 10px;
+    border-radius: 5px;
+    overflow-x: auto;
+    margin-bottom: 0;
+}
+
+/* Media query for small screens (mobile) */
+@media (max-width: 768px) {
+    .payment-container {
+        padding: 15px; /* Adjust padding for smaller screens */
+    }
+
+    /* Adjust the pre tag text size and padding on small screens */
+    .payment-container pre {
+        font-size: 14px; /* Reduce font size */
+        padding: 8px;    /* Reduce padding */
+    }
+}
+
+
+
+
+    /* Updated section visibility */
+    .payment-section,
+    .history-section {
+        display: none;
+    }
+
+    .payment-section.active,
+    .history-section.active {
+        display: block;
+    }
+
+    .payment-details-box,
+    .history-details-box {
+        padding: 25px;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 15px;
+        margin-bottom: 30px;
+        color: #333;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .payment-details-box h3,
+    .history-details-box h3 {
+        font-size: 1.7rem;
+        margin-bottom: 15px;
+        color: #4CAF50;
+    }
+
+    .payment-details-box p,
+    .history-details-box p {
+        margin: 8px 0;
+        font-size: 1.1rem;
+    }
+
+    .history-details-box a {
+        color: #4CAF50;
+        text-decoration: none;
+        font-weight: bold;
+        transition: color 0.3s ease;
+    }
+
+    .history-details-box a:hover {
+        color: #2E8B57;
+        text-decoration: underline;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .payment-container {
+            padding: 15px;
+        }
+
+        .payment-details-box,
+        .history-details-box {
+            padding: 15px;
+        }
+
+        .payment-swap-btn {
+            font-size: 1.1rem;
+            padding: 10px 20px;
+        }
+    }

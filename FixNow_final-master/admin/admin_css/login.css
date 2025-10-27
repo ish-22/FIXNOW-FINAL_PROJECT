@@ -1,0 +1,213 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* Background video */
+/* Background video */
+.background-video {
+    position: fixed; /* Make sure it's fixed relative to the viewport */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1; /* Keep it in the background */
+    overflow: hidden; /* Prevent overflow */
+}
+
+/* Make sure the video fills the entire container */
+.background-video video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* Ensure the video covers the entire screen */
+}
+
+/* Main container */
+.main-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+   
+    padding: 20px; /* Optional, if you want some padding inside the container */
+    overflow: hidden;
+}
+
+/* Login Box */
+.login-box {
+    display: flex;
+    width: 80%;
+    max-width: 1000px;
+    height: 80%;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Hover effect for the login box */
+/* .login-box:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 30px rgba(0, 0, 0, 0.2);
+} */
+
+/* Left section (login form) */
+.login-left {
+    width: 50%;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-left h1 {
+    font-size: 2.5em;
+    font-weight: bold;
+    margin-bottom: 30px;
+    color: #333;
+}
+
+/* Input Fields */
+.input-field {
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.input-field input {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    font-size: 1.1em;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.input-field input:focus {
+    border-color: #ff6f61;
+    box-shadow: 0 0 8px rgba(255, 111, 97, 0.5);
+    outline: none;
+}
+
+/* Button Styling */
+.btn-primary {
+    width: 100%;
+    padding: 8px;
+    background-color: #ff6f61;
+    color: white;
+    border-radius: 10px;
+    font-size: 1.3em;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #ff4a35;
+    transform: translateY(-2px);
+}
+
+.footer-text {
+    font-size: 1.1em;
+    margin-top: 20px;
+    color: #333;
+}
+
+.footer-text a {
+    text-decoration: none;
+    color: #ff6f61;
+}
+
+/* Right section (company details) */
+.login-right {
+    width: 50%;
+    background-color: rgba(51, 51, 51, 0.8); /* Set the background color to semi-transparent */
+    color: white;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    border-top-right-radius: 20px;
+    border-bottom-right-radius: 20px;
+}
+
+.login-right h2 {
+    font-size: 2.5em;
+    margin-bottom: 30px;
+    font-weight: 600;
+}
+
+.login-right p {
+    font-size: 1.2em;
+    color: #ccc;
+    line-height: 1.6;
+}
+
+/* Social Media Buttons */
+.social-login {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.social-login button {
+    background-color: white;
+    border: none;
+    border-radius: 50%;
+    padding: 15px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.social-login button:hover {
+    background-color: #f0f0f0;
+    transform: translateY(-2px);
+}
+
+.social-login i {
+    font-size: 30px;
+    color: #333;
+}
+
+/* Social Media Icon Colors */
+.social-login button i.fab.fa-facebook-f {
+    color: #3b5998;
+}
+
+.social-login button i.fab.fa-google {
+    color: #db4437;
+}
+
+.social-login button i.fab.fa-linkedin-in {
+    color: #0077b5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .login-box {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .login-left, .login-right {
+        width: 100%;
+    }
+
+    .btn-primary {
+        width: 90%;
+    }
+
+    .input-field input {
+        font-size: 1em;
+    }
+
+    .footer-text {
+        font-size: 1em;
+    }
+}

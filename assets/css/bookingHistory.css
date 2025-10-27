@@ -1,0 +1,170 @@
+/* General Styling */
+body {
+    background-color: #f9f9f9;
+    margin: 0;
+    padding: 0;
+}
+
+/* Hero Section */
+.section-hero-bookings {
+    text-align: left;
+    padding: 30px 15px;
+    /* background: linear-gradient(to right, #007bff, #00b4db); */
+    color: white;
+    border-radius: 0 0 20px 20px;
+}
+
+.all-bookings-title {
+    font-size: 28px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    color:#007bff;
+}
+
+/* Bookings Container */
+.bookings-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+    padding: 30px;
+}
+
+/* Booking Details Card */
+.booking-details {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    width: 350px;
+    padding: 20px;
+    transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.booking-details:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+/* Booking Information Styling */
+.booking-details h3 {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 5px;
+}
+
+.booking-details p {
+    font-size: 16px;
+    line-height: 1.6;
+    margin: 5px 0;
+    color: #333;
+}
+
+.booking-details p strong {
+    color: #007bff;
+}
+
+/* Back Button Container */
+.back-button-container {
+    display: flex;
+    justify-content: flex-start; /* Align to the left */
+    padding: 20px;
+}
+
+/* Back Button */
+.back-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.back-button:hover {
+    background-color: #0056b3;
+}
+
+/* Ensure back button does not interfere with the title */
+.all-bookings-title {
+    text-align: center;
+    margin-top: -60px; /* Adjust spacing */
+}
+
+
+/* Booking & Task Status Labels */
+.status-label {
+    display: inline-block;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 4px 8px;
+    border-radius: 6px;
+    text-transform: capitalize;
+    margin-left: 10px;
+    min-width: 100px;
+    text-align: center;
+}
+
+/* Booking Status Colors */
+.booking-status {
+    background-color: #28a745;
+    color: white;
+}
+
+.booking-status.pending {
+    background-color: #ffc107;
+    color: black;
+  
+}
+
+.booking-status.cancelled {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* Task Status Colors */
+.task-status {
+    background-color: #17a2b8;
+    color: white;
+    margin-left: 35px;
+}
+
+.task-status.completed {
+    background-color: #28a745;
+    color: white;
+    margin-left: 35px;
+}
+
+.task-status.in-progress {
+    background-color: #ffc107;
+    color: black;
+}
+
+.task-status.failed {
+    background-color: #dc3545;
+    color: white;
+}
+
+/* No Bookings Message */
+.no-bookings {
+    text-align: center;
+    font-size: 18px;
+    color: #666;
+    padding: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .bookings-container {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .booking-details {
+        width: 90%;
+    }
+}

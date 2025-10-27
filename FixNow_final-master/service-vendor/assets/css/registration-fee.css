@@ -1,0 +1,198 @@
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background: url('https://media.giphy.com/media/BHNfhgU63qrks/giphy.gif') fixed;
+    background-size: cover;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #333;
+}
+
+.payment-container {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(15px);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+    width: 400px;
+    text-align: center;
+}
+
+.payment-container h2 {
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+    color: #4CAF50;
+}
+
+.payment-details {
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    color: #555;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+input[type="email"],
+input[type="text"],
+input[type="tel"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: #f9f9f9;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease;
+}
+
+input:focus {
+    border-color: #4CAF50;
+    outline: none;
+    background: #fff;
+}
+
+.form-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.form-row input {
+    flex: 1;
+}
+
+.save-card {
+    text-align: left;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.save-card input {
+    margin-right: 10px;
+}
+
+.pay-now {
+    background-color: #4CAF50;
+    color: #fff;
+    border: none;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.pay-now:hover {
+    background-color: #45a049;
+    transform: scale(1.02);
+}
+
+.pay-now:active {
+    transform: scale(0.98);
+}
+
+.logo {
+    margin-bottom: 20px;
+}
+
+.logo img {
+    max-width: 100px;
+}
+
+/* Back Button Styling */
+.back-button {
+    background-color: #aa00ff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    position: fixed;
+    left: 10px;
+    transform: translateY(-50%);
+}
+
+.back-button:hover {
+    background-color: #0056b3;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .payment-container {
+        width: 90%;
+        padding: 20px;
+    }
+
+    .payment-container h2 {
+        font-size: 1.5rem;
+    }
+
+    .payment-details {
+        font-size: 1rem;
+    }
+
+    input[type="email"],
+    input[type="text"],
+    input[type="tel"] {
+        font-size: 0.9rem;
+    }
+
+    .pay-now {
+        font-size: 1rem;
+        padding: 12px;
+    }
+
+    .back-button {
+        font-size: 14px;
+        padding: 8px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .payment-container {
+        width: 95%;
+        padding: 15px;
+    }
+
+    .payment-container h2 {
+        font-size: 1.2rem;
+    }
+
+    .payment-details {
+        font-size: 0.9rem;
+    }
+
+    input[type="email"],
+    input[type="text"],
+    input[type="tel"] {
+        font-size: 0.85rem;
+    }
+
+    .pay-now {
+        font-size: 0.9rem;
+        padding: 10px;
+    }
+
+    .back-button {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}
+

@@ -1,0 +1,150 @@
+/* Section for Hero Bookings */
+.section-hero-bookings {
+    background-color: #f8f9fa;
+    padding: 50px 0;
+    font-family: 'Arial', sans-serif;
+}
+
+/* Booking Grid Layout */
+.bookings-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 15px;
+    padding: 0 20px;
+    margin-top: 20px;
+}
+
+/* Default (Confirmed & Completed) - White */
+.booking-details {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+
+/* Default Normal (Confirmed, Completed, or Cancelled with Pending Task) */
+.booking-normal {
+    background: #ffffff !important;
+    color: #333 !important;
+    border: 1px solid #ddd !important;
+}
+
+/* Add styles for the "All Bookings" heading */
+.all-bookings-title {
+    font-size: 2.5rem;
+    text-align: center;
+    margin-top: 80px;
+
+    font-weight: 700;
+}
+
+
+/* Booking Pending - Dark Pink */
+.booking-pending {
+    background: #d1b1bc !important;
+    color: #fff !important;
+    border: 1px solid #d6b9c1 !important;
+}
+
+/* Task Pending - Dark Yellow */
+.task-pending { 
+    background: #d6c29b !important;
+    color: #fff !important;
+    border: 1px solid #ff9900 !important;
+}
+
+/* Hover Effect */
+.booking-details:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Booking Title */
+.booking-details h3 {
+    text-align: center;
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: #333;
+    font-weight: 600; 
+}
+
+
+/* Booking Text */
+.booking-details p {
+    font-size: 1rem;
+    margin: 8px 0;
+    color: #555;
+}
+
+.booking-details p strong {
+    color: #007bff;
+}
+
+/* Button Action Container */
+.booking-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 20px;
+}
+
+/* Buttons Styling */
+.booking-actions input {
+    padding: 10px 15px;
+    font-size: 1rem;
+    border-radius: 5px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+/* Cancel Button */
+.cancel-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background-color: #c82333;
+}
+
+/* Confirm Button */
+.confirm-btn {
+    background-color: #28a745;
+    color: white;
+}
+
+.confirm-btn:hover {
+    background-color: #218838;
+}
+
+/* Complete Button */
+.complete-btn {
+    background-color: #007bff;
+    color: white;
+}
+
+.complete-btn:hover {
+    background-color: #0056b3;
+}
+
+/* Responsive Design for Smaller Screens */
+@media (max-width: 768px) {
+    .booking-details {
+        padding: 15px;
+    }
+
+    .booking-actions input {
+        font-size: 0.9rem;
+        padding: 8px 12px;
+    }
+
+    /* Ensure buttons stay in a row even on small screens */
+    .booking-actions {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
