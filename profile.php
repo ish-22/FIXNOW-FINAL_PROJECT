@@ -40,7 +40,10 @@ if (!$customer) {
             <p><strong>Address:</strong> <?php echo htmlspecialchars($customer['cus_address']); ?></p>
             <p><strong>District:</strong> <?php echo htmlspecialchars($customer['district_name']); ?></p>
             <p><strong>Town:</strong> <?php echo htmlspecialchars($customer['town_name']); ?></p>
-            <p><strong>Joined:</strong> <?php echo date('F j, Y', strtotime($customer['registration_date'])); ?></p>
+            <p><strong>Joined:</strong> <?php 
+                $joined_date = !empty($customer['registration_date']) ? $customer['registration_date'] : (!empty($customer['created_at']) ? $customer['created_at'] : 'now');
+                echo date('F j, Y', strtotime($joined_date)); 
+            ?></p>
         </div>
 
         <div class="profile-buttons">

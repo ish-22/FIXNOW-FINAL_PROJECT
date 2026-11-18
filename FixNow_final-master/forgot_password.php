@@ -1,6 +1,6 @@
 <?php
 include('./config/constant.php');
-
+include('./config/mail.php');
 
 if (isset($_POST['submit_email'])) {
     $email = mysqli_real_escape_string($conn, $_POST['email']);
@@ -12,14 +12,29 @@ if (isset($_POST['submit_email'])) {
     $result_customer = mysqli_query($conn, $query_customer);
     $result_vendor = mysqli_query($conn, $query_vendor);
 
-    if (mysqli_num_rows($result_customer) > 0) {
+    if (mysqli_num_rows($result_customer) > 0 || mysqli_num_rows($result_vendor) > 0) {
+        $user_type = (mysqli_num_rows($result_customer) > 0) ? "customer" : "vendor";
         $_SESSION['reset_email'] = $email;
-        $_SESSION['user_type'] = "customer";
-        header("Location: reset_password.php");
-        exit();
-    } elseif (mysqli_num_rows($result_vendor) > 0) {
-        $_SESSION['reset_email'] = $email;
-        $_SESSION['user_type'] = "vendor";
+        $_SESSION['user_type'] = $user_type;
+
+        // Send reset notification email via PHPMailer
+        $reset_link = SITEURL . "reset_password.php";
+        $subject = "FIXNOW - Password Reset Request";
+        $body = "
+        <div style='font-family: Arial, sans-serif; padding: 20px; color: #333;'>
+            <h2 style='color: #1976d2;'>FIXNOW Password Reset</h2>
+            <p>Hello,</p>
+            <p>A request was received to reset the password for your account ($email).</p>
+            <p style='margin: 20px 0;'>
+                <a href='$reset_link' style='background: #1976d2; color: #ffffff; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold;'>
+                    Reset My Password
+                </a>
+            </p>
+            <p>If you did not request this change, you can safely ignore this email.</p>
+            <p style='color: #777; font-size: 13px; margin-top: 30px;'>&copy; " . date('Y') . " FIXNOW Service Platform</p>
+        </div>";
+        @sendFixNowMail($email, "FIXNOW User", $subject, $body);
+
         header("Location: reset_password.php");
         exit();
     } else {
