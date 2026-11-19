@@ -45,6 +45,7 @@
                 <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; font-size: 14.5px;">
                     <li><a href="about.php" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">About FIXNOW</a></li>
                     <li><a href="faq.php" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Help & FAQs</a></li>
+                    <li><a href="security.php" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Platform Security</a></li>
                     <li><a href="contact.php" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Contact Support</a></li>
                     <li><a href="privacy_policy.php" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Privacy Policy</a></li>
                     <li><a href="terms_of_service.php" style="color: #94a3b8; text-decoration: none; transition: color 0.2s;">Terms of Service</a></li>
@@ -84,7 +85,8 @@
             <div style="display: flex; gap: 20px;">
                 <a href="privacy_policy.php" style="color: #94a3b8; text-decoration: none;">Privacy</a>
                 <a href="terms_of_service.php" style="color: #94a3b8; text-decoration: none;">Terms</a>
-                <a href="faq.php" style="color: #94a3b8; text-decoration: none;">Security</a>
+                <a href="security.php" style="color: #94a3b8; text-decoration: none;">Security</a>
+                <a href="faq.php" style="color: #94a3b8; text-decoration: none;">FAQs</a>
             </div>
         </div>
     </div>
