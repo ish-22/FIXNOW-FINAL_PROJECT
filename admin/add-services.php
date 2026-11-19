@@ -1,151 +1,146 @@
 <?php
-include('partials/main.php'); 
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Handle Add Service Category
-if (isset($_POST['submit'])) {
-    $category_name = trim($_POST['category_name']);
+$cat_msg = '';
+$service_msg = '';
 
-    // Check if category already exists
-    $check_sql = "SELECT * FROM tbl_category WHERE category_name = ?";
-    $check_stmt = $conn->prepare($check_sql);
-    $check_stmt->bind_param("s", $category_name);
-    $check_stmt->execute();
-    $check_result = $check_stmt->get_result();
-
-    if ($check_result->num_rows > 0) {
-        // Category already exists
-        header("Location: " . SITEURL . 'admin/add-services.php?status=exists&action=add-category');
-        exit();
-    } else {
-        // Insert new category
-        $sql = "INSERT INTO tbl_category (category_name) VALUES (?)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("s", $category_name);
-
-        if ($stmt->execute()) {
-            header("Location: " . SITEURL . 'admin/add-services.php?status=success&action=add-category');
+// Handle Add Category
+if (isset($_POST['submit-category'])) {
+    $category_name = trim($_POST['category_name'] ?? '');
+    if (!empty($category_name)) {
+        $check = db_fetch_one($conn, "SELECT id FROM tbl_category WHERE category_name = ?", [$category_name], "s");
+        if ($check) {
+            $cat_msg = "Category '{$category_name}' already exists.";
         } else {
-            header("Location: " . SITEURL . 'admin/add-services.php?status=error&action=add-category');
+            db_execute($conn, "INSERT INTO tbl_category (category_name) VALUES (?)", [$category_name], "s");
+            header("Location: add-services.php?status=success&action=category_added");
+            exit();
         }
     }
 }
 
 // Handle Add Service Type
 if (isset($_POST['submit-service'])) {
-    $category_id = $_POST['category-select'];
-    $service_type = trim($_POST['service_type']);
-    $about_service = $_POST['about_service'];
-    $booking_price = $_POST['booking_price'];
+    $category_id = intval($_POST['category_id'] ?? 0);
+    $service_type = trim($_POST['service_type'] ?? '');
+    $about_service = trim($_POST['about_service'] ?? '');
+    $booking_price = floatval($_POST['booking_price'] ?? 0.00);
 
-    // Handle image upload
+    // Handle Image Upload
+    $image_name = "";
     if (isset($_FILES['service_image']['name']) && $_FILES['service_image']['name'] != "") {
-        $image_name = $_FILES['service_image']['name'];
-        $ext = pathinfo($image_name, PATHINFO_EXTENSION);
+        $ext = pathinfo($_FILES['service_image']['name'], PATHINFO_EXTENSION);
         $image_name = "Service_" . rand(1000, 9999) . "." . $ext;
-        $source_path = $_FILES['service_image']['tmp_name'];
-        $destination_path = "../images/service_images/" . $image_name;
-
-        if (!move_uploaded_file($source_path, $destination_path)) {
-            $_SESSION['upload_error'] = "Failed to upload image.";
-            $image_name = "";
-        }
-    } else {
-        $image_name = "";
+        $source = $_FILES['service_image']['tmp_name'];
+        $dest = "../images/service_images/" . $image_name;
+        move_uploaded_file($source, $dest);
     }
 
-    // Check if service type already exists under same category
-    $check_sql = "SELECT * FROM tbl_service WHERE service_type = ? AND category_id = ?";
-    $check_stmt = $conn->prepare($check_sql);
-    $check_stmt->bind_param("si", $service_type, $category_id);
-    $check_stmt->execute();
-    $check_result = $check_stmt->get_result();
-
-    if ($check_result->num_rows > 0) {
-        // Service type already exists
-        header("Location: " . SITEURL . 'admin/manage-services.php?status=exists&action=add-service');
-        exit();
-    } else {
-        // Insert service
-        $sql = "INSERT INTO tbl_service (service_type, about_service, booking_price, category_id, service_image) 
-                VALUES (?, ?, ?, ?, ?)";
-
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param("ssdis", $service_type, $about_service, $booking_price, $category_id, $image_name);
-
-        if ($stmt->execute()) {
-            header("Location: " . SITEURL . 'admin/manage-services.php?status=success&action=add-service');
+    if (!empty($service_type) && $category_id > 0) {
+        $check = db_fetch_one($conn, "SELECT id FROM tbl_service WHERE service_type = ? AND category_id = ?", [$service_type, $category_id], "si");
+        if ($check) {
+            $service_msg = "This service type already exists under this trade category.";
         } else {
-            header("Location: " . SITEURL . 'admin/manage-services.php?status=error&action=add-service');
+            db_execute($conn, "INSERT INTO tbl_service (category_id, service_type, about_service, booking_price, service_image) VALUES (?, ?, ?, ?, ?)", [$category_id, $service_type, $about_service, $booking_price, $image_name], "issds");
+            header("Location: manage-services.php?status=success&action=service_added");
+            exit();
         }
+    } else {
+        $service_msg = "Please select a category and specify service title.";
     }
 }
+
+// Fetch categories for dropdown
+$categories = db_fetch_all($conn, "SELECT * FROM tbl_category ORDER BY category_name ASC");
+
+include('partials/main.php'); 
 ?>
 
-<div class="main-content">
-    <div class="wrapper">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 28px; max-width: 1100px; margin: 0 auto;">
+    <!-- Form 1: Add New Trade Category -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <div>
+                <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">1. Add Trade Category</h3>
+                <p style="color: var(--fn-text-muted); font-size: 13.5px; margin: 0;">Create a broader category (e.g. Electrical, Carpentry).</p>
+            </div>
+        </div>
 
-        <!-- Add Category Form -->
-        <form class="add-service-form" action="" method="POST">
-            <h2 class="main-welcome">Add Service Category</h2>
+        <?php if (!empty($cat_msg)): ?>
+            <div class="alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <?php echo htmlspecialchars($cat_msg); ?></div>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['action']) && $_GET['action'] == 'category_added'): ?>
+            <div class="alert-success"><i class="fa-solid fa-check"></i> Category registered successfully!</div>
+        <?php endif; ?>
+
+        <form action="" method="POST">
             <div class="form-group">
-                <label for="category-name">Type Category Name:</label>
-                <input type="text" id="category-name" name="category_name" placeholder="Enter Category Name" required>
+                <label for="category_name">Category Title</label>
+                <input type="text" id="category_name" name="category_name" placeholder="e.g. Solar & Renewable Energy" required />
             </div>
-            <div class="form-group">
-                <input type="submit" name="submit" value="Add Category" class="btn-primary">
-            </div>
+
+            <button type="submit" name="submit-category" class="btn-primary" style="margin-top: 10px;">
+                <i class="fa-solid fa-folder-plus"></i> Save Category
+            </button>
         </form>
+    </div>
 
-        <br />
+    <!-- Form 2: Add New Service Item -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <div>
+                <h3 style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">2. Add Service Item</h3>
+                <p style="color: var(--fn-text-muted); font-size: 13.5px; margin: 0;">Specify a bookable service with upfront booking price.</p>
+            </div>
+        </div>
 
-        <!-- Add Service Type Form -->
-        <form class="add-service-type-form" action="" method="POST" enctype="multipart/form-data">
-            <h2>Add Service Type</h2>
+        <?php if (!empty($service_msg)): ?>
+            <div class="alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <?php echo htmlspecialchars($service_msg); ?></div>
+        <?php endif; ?>
+
+        <form action="" method="POST" enctype="multipart/form-data">
             <div class="form-group">
-                <label for="category-select">Select Category:</label>
-                <select id="category-select" name="category-select" required>
-                    <?php
-                    $sql = "SELECT * FROM tbl_category";
-                    $stmt = $conn->prepare($sql);
-                    $stmt->execute();
-                    $result = $stmt->get_result();
-
-                    while ($row = $result->fetch_assoc()) {
-                        echo "<option value='{$row['id']}'>{$row['category_name']}</option>";
-                    }
-                    ?>
+                <label for="category_id">Parent Category</label>
+                <select id="category_id" name="category_id" required>
+                    <option value="">Select Category</option>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?php echo $cat['id']; ?>"><?php echo htmlspecialchars($cat['category_name']); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
 
             <div class="form-group">
-                <label for="service-type">Service Type:</label>
-                <input type="text" id="service-type" name="service_type" placeholder="Enter Service Type" required>
+                <label for="service_type">Service Title</label>
+                <input type="text" id="service_type" name="service_type" placeholder="e.g. AC Inverter Servicing & Gas Refill" required />
             </div>
 
             <div class="form-group">
-                <label for="about-service">About Service:</label>
-                <textarea id="about-service" name="about_service" placeholder="Describe the service" rows="3" cols="80" required></textarea>
+                <label for="booking_price">Base Booking Price (LKR)</label>
+                <input type="number" id="booking_price" name="booking_price" placeholder="3500.00" step="0.01" min="0" required />
             </div>
 
             <div class="form-group">
-                <label for="booking-price">Booking Price (in rupees):</label>
-                <input type="number" id="booking-price" name="booking_price" placeholder="Enter Booking Price" min="0" step="any" required>
+                <label for="about_service">Service Description</label>
+                <textarea id="about_service" name="about_service" placeholder="Detailed description of what is included in this service..." rows="3"></textarea>
             </div>
 
             <div class="form-group">
-                <label for="service-image">Add Image:</label>
-                <input type="file" id="service-image" name="service_image" accept="image/*" required>
-                <div class="image-preview">
-                    <img src="../images/man1.jpg" alt="Service Image" id="preview-image">
-                </div>
+                <label for="service_image">Service Visual Image</label>
+                <input type="file" id="service_image" name="service_image" accept="image/*" />
             </div>
 
-            <div class="form-group">
-                <input type="submit" name="submit-service" value="Add Service" class="btn-primary">
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button type="submit" name="submit-service" class="btn-primary">
+                    <i class="fa-solid fa-plus"></i> Publish Service
+                </button>
+                <a href="manage-services.php" class="btn-secondary">Cancel</a>
             </div>
         </form>
-
     </div>
 </div>
 
-<?php include('partials/footer.php'); ?>
+<?php 
+include('partials/footer.php'); 
+?>

@@ -1,17 +1,13 @@
 <?php
-// Database connection
-include('../config/constant.php');
+include('partials/main.php');
 
 // Fetch data for analysis
-// Booking statistics
 $booking_status_query = "SELECT booking_status, COUNT(*) as count FROM tbl_booking GROUP BY booking_status";
 $booking_status_result = mysqli_query($conn, $booking_status_query);
 
-// Payment status
 $payment_status_query = "SELECT payment_status, COUNT(*) as count FROM tbl_booking GROUP BY payment_status";
 $payment_status_result = mysqli_query($conn, $payment_status_query);
 
-// Service popularity
 $service_query = "SELECT s.service_type, COUNT(b.id) as count 
                  FROM tbl_service s 
                  LEFT JOIN tbl_booking b ON s.id = b.service_id 
@@ -19,284 +15,207 @@ $service_query = "SELECT s.service_type, COUNT(b.id) as count
 $service_result = mysqli_query($conn, $service_query);
 
 // Total counts
-$total_bookings = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM tbl_booking"));
-$total_customers = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM tbl_customer"));
-$total_providers = mysqli_num_rows(mysqli_query($conn, "SELECT * FROM tbl_service_providers"));
+$total_bookings = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM tbl_booking"));
+$total_customers = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM tbl_customer"));
+$total_providers = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM tbl_service_providers"));
+$total_escrow_res = db_fetch_one($conn, "SELECT SUM(total_amount) as total FROM tbl_booking WHERE payment_status = 'Paid'");
+$total_escrow = $total_escrow_res ? floatval($total_escrow_res['total']) : 0;
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Analysis Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: Arial, sans-serif;
-        }
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+<!-- Top Analytics Summary Cards -->
+<div class="admin-stats-grid">
+    <div class="admin-stat-card">
+        <div class="admin-stat-header">
+            <span class="admin-stat-title">Platform Bookings</span>
+            <div class="admin-stat-icon primary"><i class="fa-solid fa-calendar-check"></i></div>
+        </div>
+        <div class="admin-stat-value"><?php echo $total_bookings; ?></div>
+        <div class="admin-stat-footer"><i class="fa-solid fa-arrow-trend-up" style="color:#10b981;"></i> Lifetime orders placed</div>
+    </div>
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
+    <div class="admin-stat-card">
+        <div class="admin-stat-header">
+            <span class="admin-stat-title">Registered Clients</span>
+            <div class="admin-stat-icon success"><i class="fa-solid fa-users"></i></div>
+        </div>
+        <div class="admin-stat-value" style="color: #059669;"><?php echo $total_customers; ?></div>
+        <div class="admin-stat-footer"><i class="fa-solid fa-house" style="color:#10b981;"></i> Verified households</div>
+    </div>
 
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            padding: 20px;
-        }
+    <div class="admin-stat-card">
+        <div class="admin-stat-header">
+            <span class="admin-stat-title">Active Specialists</span>
+            <div class="admin-stat-icon warning"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+        </div>
+        <div class="admin-stat-value" style="color: #d97706;"><?php echo $total_providers; ?></div>
+        <div class="admin-stat-footer"><i class="fa-solid fa-id-badge" style="color:#f59e0b;"></i> Vetted trade contractors</div>
+    </div>
 
-        .card {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            padding: 20px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+    <div class="admin-stat-card">
+        <div class="admin-stat-header">
+            <span class="admin-stat-title">Cumulative Escrow</span>
+            <div class="admin-stat-icon info"><i class="fa-solid fa-vault"></i></div>
+        </div>
+        <div class="admin-stat-value" style="color: #4f46e5;">Rs. <?php echo number_format($total_escrow, 2); ?></div>
+        <div class="admin-stat-footer"><i class="fa-solid fa-shield-check" style="color:#6366f1;"></i> 100% Escrow protected</div>
+    </div>
+</div>
 
-        .back-button {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            background-color:rgb(211, 137, 18);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .back-button:hover {
-            background-color:rgb(103, 84, 3);
-        }
-
-        .count-box {
-            text-align: center;
-            padding: 20px;
-        }
-
-        .count-box h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .count-box .number {
-            font-size: 2.5em;
-            color: #2c3e50;
-            font-weight: bold;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 15px;
-            border-radius: 10px;
-            backdrop-filter: blur(5px);
-        }
-
-        @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-            
-            .chart-container {
-                height: 250px;
-            }
-        }
-    </style>
-</head>
-<body>
-<button class="back-button" onclick="window.location.href='admin-index.php'">← Back</button>
-
-
-    <div class="container">
-        <h1>Analysis Dashboard</h1>
-        
-        <div class="dashboard">
-            <!-- Count Boxes -->
-            <div class="card count-box">
-                <h3>Total Bookings</h3>
-                <div class="number"><?php echo $total_bookings; ?></div>
-            </div>
-            
-            <div class="card count-box">
-                <h3>Total Customers</h3>
-                <div class="number"><?php echo $total_customers; ?></div>
-            </div>
-            
-            <div class="card count-box">
-                <h3>Total Providers</h3>
-                <div class="number"><?php echo $total_providers; ?></div>
-            </div>
-            
-            <!-- Booking Status Bar Chart -->
-            <div class="card">
-                <div class="chart-container">
-                    <canvas id="bookingStatusChart"></canvas>
-                </div>
-            </div>
-            
-            <!-- Payment Status Pie Chart -->
-            <div class="card">
-                <div class="chart-container">
-                    <canvas id="paymentStatusChart"></canvas>
-                </div>
-            </div>
-            
-            <!-- Service Popularity Bar Chart -->
-            <div class="card">
-                <div class="chart-container">
-                    <canvas id="servicePopularityChart"></canvas>
-                </div>
-            </div>
+<!-- Charts Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 24px; margin-bottom: 30px;">
+    <!-- Chart 1: Booking Status -->
+    <div class="admin-card" style="margin-bottom: 0;">
+        <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+            <i class="fa-solid fa-chart-column" style="color:#0284c7; margin-right: 8px;"></i> Booking Order Distribution
+        </h3>
+        <div style="height: 300px; position: relative;">
+            <canvas id="bookingStatusChart"></canvas>
         </div>
     </div>
 
-    <script>
-        // Booking Status Chart
-        const bookingStatusCtx = document.getElementById('bookingStatusChart').getContext('2d');
-        const bookingStatusData = {
-            labels: [<?php 
-                $labels = [];
-                while ($row = mysqli_fetch_assoc($booking_status_result)) {
-                    $labels[] = "'{$row['booking_status']}'";
-                }
-                echo implode(',', $labels);
-            ?>],
-            datasets: [{
-                label: 'Booking Status',
-                data: [<?php 
-                    mysqli_data_seek($booking_status_result, 0);
-                    $data = [];
-                    while ($row = mysqli_fetch_assoc($booking_status_result)) {
-                        $data[] = $row['count'];
-                    }
-                    echo implode(',', $data);
-                ?>],
-                backgroundColor: [
-                    'rgba(75, 192, 192, 0.6)',
-                    'rgba(54, 162, 235, 0.6)',
-                    'rgba(255, 99, 132, 0.6)'
-                ]
-            }]
-        };
-        
-        new Chart(bookingStatusCtx, {
-            type: 'bar',
-            data: bookingStatusData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true }
-                },
-                plugins: {
-                    title: { display: true, text: 'Booking Status Distribution' }
-                }
-            }
-        });
+    <!-- Chart 2: Payment Escrow Status -->
+    <div class="admin-card" style="margin-bottom: 0;">
+        <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+            <i class="fa-solid fa-chart-pie" style="color:#10b981; margin-right: 8px;"></i> Payment &amp; Escrow Settlement
+        </h3>
+        <div style="height: 300px; position: relative;">
+            <canvas id="paymentStatusChart"></canvas>
+        </div>
+    </div>
+</div>
 
-// JavaScript Code
-const paymentStatusCtx = document.getElementById('paymentStatusChart').getContext('2d');
+<!-- Full Width Chart: Service Popularity -->
+<div class="admin-card">
+    <h3 style="font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+        <i class="fa-solid fa-chart-bar" style="color:#6366f1; margin-right: 8px;"></i> Trade Demand &amp; Service Category Popularity
+    </h3>
+    <div style="height: 340px; position: relative;">
+        <canvas id="servicePopularityChart"></canvas>
+    </div>
+</div>
 
-const paymentStatusData = {
-    labels: <?php 
+<script>
+// Chart 1: Booking Status Distribution
+const bookingStatusCtx = document.getElementById('bookingStatusChart').getContext('2d');
+const bookingStatusData = {
+    labels: [<?php 
         $labels = [];
-        while ($row = mysqli_fetch_assoc($payment_status_result)) {
-            $labels[] = $row['payment_status'];
+        mysqli_data_seek($booking_status_result, 0);
+        while ($row = mysqli_fetch_assoc($booking_status_result)) {
+            $labels[] = "'" . addslashes($row['booking_status']) . "'";
         }
-        echo json_encode($labels); // Properly formatted JSON output
-    ?>,
+        echo implode(',', $labels);
+    ?>],
     datasets: [{
-        data: <?php 
-            mysqli_data_seek($payment_status_result, 0);
+        label: 'Orders',
+        data: [<?php 
             $data = [];
+            mysqli_data_seek($booking_status_result, 0);
+            while ($row = mysqli_fetch_assoc($booking_status_result)) {
+                $data[] = $row['count'];
+            }
+            echo implode(',', $data);
+        ?>],
+        backgroundColor: [
+            'rgba(2, 132, 199, 0.7)',
+            'rgba(16, 185, 129, 0.7)',
+            'rgba(245, 158, 11, 0.7)',
+            'rgba(239, 68, 68, 0.7)'
+        ],
+        borderRadius: 8
+    }]
+};
+
+new Chart(bookingStatusCtx, {
+    type: 'bar',
+    data: bookingStatusData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+});
+
+// Chart 2: Payment Escrow Status Distribution
+const paymentStatusCtx = document.getElementById('paymentStatusChart').getContext('2d');
+const paymentStatusData = {
+    labels: [<?php 
+        $labels = [];
+        mysqli_data_seek($payment_status_result, 0);
+        while ($row = mysqli_fetch_assoc($payment_status_result)) {
+            $labels[] = "'" . addslashes($row['payment_status']) . "'";
+        }
+        echo implode(',', $labels);
+    ?>],
+    datasets: [{
+        data: [<?php 
+            $data = [];
+            mysqli_data_seek($payment_status_result, 0);
             while ($row = mysqli_fetch_assoc($payment_status_result)) {
                 $data[] = $row['count'];
             }
-            echo json_encode($data); // Properly formatted JSON output
-        ?>,
+            echo implode(',', $data);
+        ?>],
         backgroundColor: [
-            'rgba(255, 206, 86, 0.6)',
-            'rgba(75, 192, 192, 0.6)'
+            'rgba(16, 185, 129, 0.8)',
+            'rgba(245, 158, 11, 0.8)',
+            'rgba(239, 68, 68, 0.8)'
         ]
     }]
 };
 
-        new Chart(paymentStatusCtx, {
-            type: 'pie',
-            data: paymentStatusData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: { display: true, text: 'Payment Status Distribution' }
-                }
-            }
-        });
+new Chart(paymentStatusCtx, {
+    type: 'doughnut',
+    data: paymentStatusData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } }
+    }
+});
 
-        // Service Popularity Chart
-        const servicePopularityCtx = document.getElementById('servicePopularityChart').getContext('2d');
-        const servicePopularityData = {
-            labels: [<?php 
-                $labels = [];
-                while ($row = mysqli_fetch_assoc($service_result)) {
-                    $labels[] = "'{$row['service_type']}'";
-                }
-                echo implode(',', $labels);
-            ?>],
-            datasets: [{
-                label: 'Number of Bookings',
-                data: [<?php 
-                    mysqli_data_seek($service_result, 0);
-                    $data = [];
-                    while ($row = mysqli_fetch_assoc($service_result)) {
-                        $data[] = $row['count'];
-                    }
-                    echo implode(',', $data);
-                ?>],
-                backgroundColor: 'rgba(153, 102, 255, 0.6)'
-            }]
-        };
-        
-        new Chart(servicePopularityCtx, {
-            type: 'bar',
-            data: servicePopularityData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: { beginAtZero: true }
-                },
-                plugins: {
-                    title: { display: true, text: 'Service Popularity' }
-                }
+// Chart 3: Service Popularity
+const servicePopularityCtx = document.getElementById('servicePopularityChart').getContext('2d');
+const servicePopularityData = {
+    labels: [<?php 
+        $labels = [];
+        mysqli_data_seek($service_result, 0);
+        while ($row = mysqli_fetch_assoc($service_result)) {
+            $labels[] = "'" . addslashes($row['service_type']) . "'";
+        }
+        echo implode(',', $labels);
+    ?>],
+    datasets: [{
+        label: 'Total Bookings',
+        data: [<?php 
+            $data = [];
+            mysqli_data_seek($service_result, 0);
+            while ($row = mysqli_fetch_assoc($service_result)) {
+                $data[] = $row['count'];
             }
-        });
-    </script>
-</body>
-</html>
+            echo implode(',', $data);
+        ?>],
+        backgroundColor: 'rgba(99, 102, 241, 0.75)',
+        borderRadius: 8
+    }]
+};
 
-<?php mysqli_close($conn);?>
+new Chart(servicePopularityCtx, {
+    type: 'bar',
+    data: servicePopularityData,
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+});
+</script>
+
+<?php 
+include('partials/footer.php'); 
+?>

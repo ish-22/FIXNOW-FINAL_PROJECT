@@ -1,25 +1,21 @@
 <?php 
-// Include the database connection
-include('partials/main.php'); 
+include('../config/constant.php'); 
+include('partials/login-check.php');
 
-// Check if vendor ID is passed in the URL
 if (isset($_GET['id'])) {
-    // Get the vendor_id from the URL and sanitize it
-    $vendor_id = mysqli_real_escape_string($conn, $_GET['id']);
+    $vendor_id = intval($_GET['id']);
     
-    // SQL query to delete the vendor with the specific vendor_id
-    $delete_query = "DELETE FROM tbl_service_providers WHERE id = '$vendor_id'";
+    // Delete service provider with parameterized statement
+    $deleted = db_execute($conn, "DELETE FROM tbl_service_providers WHERE id = ?", [$vendor_id], "i");
 
-    if (mysqli_query($conn, $delete_query)) {
-        // Redirect to the manage vendors page with a success message
-        header("Location: manage-vendors.php?status=success&action=delete_vendor");
+    if ($deleted) {
+        header("Location: manage-vendor.php?status=success&action=delete_vendor");
     } else {
-        // If there's an error, redirect with an error message
-        echo "Error deleting record: " . mysqli_error($conn); // Show error message
-        header("Location: manage-vendors.php?status=error&action=delete_vendor");
+        header("Location: manage-vendor.php?status=error&action=delete_vendor");
     }
+    exit();
 } else {
-    // Redirect to the manage vendors page if no id is passed
-    header("Location: manage-vendors.php");
+    header("Location: manage-vendor.php");
+    exit();
 }
 ?>

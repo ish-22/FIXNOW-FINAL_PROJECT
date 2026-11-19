@@ -1,28 +1,19 @@
 <?php
-// Include the database connection
-include('partials/main.php');
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Check if the delete request is valid
-if (isset($_GET['id']) && !empty($_GET['id'])) {
-    $id = mysqli_real_escape_string($conn, $_GET['id']);
+if (isset($_GET['id'])) {
+    $fee_id = intval($_GET['id']);
+    $deleted = db_execute($conn, "DELETE FROM tbl_payment WHERE id = ?", [$fee_id], "i");
 
-    // Prepare the SQL query to delete the payment fee
-    $delete_query = "DELETE FROM tbl_payment WHERE id = '$id'";
-
-    // Execute the query
-    if (mysqli_query($conn, $delete_query)) {
-        // Redirect back to the manage payment fees page with success message
-        echo "<script>
-                alert('Payment fee deleted successfully!');
-                window.location.href = 'manage-payment-fees.php';
-              </script>";
+    if ($deleted) {
+        header("Location: manage-invoice.php?status=success&action=delete_monthly_fee");
     } else {
-        // Handle deletion failure
-        echo "<script>alert('Error deleting payment fee: " . mysqli_error($conn) . "');</script>";
-        echo "<script>window.location.href = 'manage-payment-fees.php';</script>";
+        header("Location: manage-invoice.php?status=error&action=delete_monthly_fee");
     }
+    exit();
 } else {
-    // If no ID is provided, redirect back to the manage page
-    echo "<script>window.location.href = 'manage-payment-fees.php';</script>";
+    header("Location: manage-invoice.php");
+    exit();
 }
 ?>

@@ -1,17 +1,19 @@
 <?php
-include('partials/main.php');
+include('../config/constant.php');
+include('partials/login-check.php');
 
 if (isset($_POST['category_id'])) {
     $category_id = intval($_POST['category_id']);
 
     $services = db_fetch_all($conn, "SELECT id, service_type, booking_price FROM tbl_service WHERE category_id = ? ORDER BY service_type ASC", [$category_id], "i");
 
+    echo '<option value="">Select Service Type</option>';
     if (!empty($services)) {
         foreach ($services as $service) {
             echo '<option value="' . htmlspecialchars($service['id']) . '" data-price="' . htmlspecialchars($service['booking_price']) . '">' . htmlspecialchars($service['service_type']) . '</option>';
         }
     } else {
-        echo '<option value="">No services available</option>';
+        echo '<option value="">No services available for this category</option>';
     }
 }
 ?>

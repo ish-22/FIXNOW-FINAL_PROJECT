@@ -1,188 +1,216 @@
-<?php 
-// Include the database connection file
-include('partials/main.php');
+<?php
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Check if offer ID is passed via GET
-if (isset($_GET['id'])) {
-    $offer_id = $_GET['id'];
-
-    // Fetch the existing offer details from the database
-    $offer_query = "SELECT * FROM tbl_offer WHERE id = '$offer_id'";
-    $offer_result = mysqli_query($conn, $offer_query);
-
-    if (mysqli_num_rows($offer_result) > 0) {
-        $offer = mysqli_fetch_assoc($offer_result);
-
-        // Fetch the category name for the selected category
-        $category_query = "SELECT * FROM tbl_category WHERE id = '" . $offer['offer_category_id'] . "'";
-        $category_result = mysqli_query($conn, $category_query);
-        $category = mysqli_fetch_assoc($category_result);
-
-        // Fetch the service type name for the selected offer type
-        $service_query = "SELECT * FROM tbl_service WHERE id = '" . $offer['offer_type_id'] . "'";
-        $service_result = mysqli_query($conn, $service_query);
-        $service = mysqli_fetch_assoc($service_result);
-    } else {
-        // If offer not found, redirect with error message
-        header("Location: " . SITEURL . 'admin/manage-offers.php?status=error&action=offer-not-found');
-    }
-} else {
-    // If no offer ID is passed, redirect with error message
-    header("Location: " . SITEURL . 'admin/manage-offers.php?status=error&action=invalid-request');
+if (!isset($_GET['id'])) {
+    header("Location: manage-offers.php");
+    exit();
 }
 
-// Handle form submission for updating offer
-if (isset($_POST['submit-offer'])) {
-    // Capture form data
-    $offer_title = $_POST['offer-title'];
-    $offer_category_id = $_POST['offer_category'];
-    $offer_type_id = $_POST['offer_type'];
-    $duration = $_POST['offer-duration'];
-    $current_price = $_POST['current-price'];
-    $discount_rate = $_POST['discount-rate'];
-    $discounted_price = $_POST['discounted-price'];
-    $description = $_POST['description'];
-    $offer_status = $_POST['offer-status'];
-    $offer_image = $_FILES['offer-image']['name'];
+$offer_id = intval($_GET['id']);
+$offer = db_fetch_one($conn, "SELECT * FROM tbl_offer WHERE id = ?", [$offer_id], "i");
 
-    // Check if a new image is uploaded
-    if ($offer_image) {
-        $image_path = "../images/offer_images/$offer_image";
-        move_uploaded_file($_FILES['offer-image']['tmp_name'], $image_path);
-    } else {
-        // If no new image is uploaded, keep the existing image
-        $image_path = "../images/offer_images/" . $offer['offer_image'];
-        $offer_image = $offer['offer_image'];
+if (!$offer) {
+    header("Location: manage-offers.php");
+    exit();
+}
+
+$error_msg = '';
+
+// Handle Update POST
+if (isset($_POST['submit-update-offer'])) {
+    $title = trim($_POST['title'] ?? '');
+    $category_id = intval($_POST['offer_category_id'] ?? 0);
+    $service_id = intval($_POST['offer_type_id'] ?? 0);
+    $duration = trim($_POST['duration'] ?? '');
+    $current_price = floatval($_POST['current_price'] ?? 0.00);
+    $discount_rate = floatval($_POST['discount_rate'] ?? 0.00);
+    $discounted_price = floatval($_POST['discounted_price'] ?? 0.00);
+    $description = trim($_POST['description'] ?? '');
+    $status = $_POST['offer_status'] ?? 'active';
+    $offer_image = $offer['offer_image'];
+
+    // Handle Image Upload if provided
+    if (isset($_FILES['offer_image']['name']) && $_FILES['offer_image']['name'] != '') {
+        $ext = pathinfo($_FILES['offer_image']['name'], PATHINFO_EXTENSION);
+        $offer_image = "Offer_" . rand(1000, 9999) . "." . $ext;
+        $dest = "../images/offer_images/" . $offer_image;
+        move_uploaded_file($_FILES['offer_image']['tmp_name'], $dest);
     }
 
-    // Update query
-    $update_query = "UPDATE tbl_offer 
-                     SET title = '$offer_title', 
-                         offer_category_id = '$offer_category_id', 
-                         offer_type_id = '$offer_type_id', 
-                         duration = '$duration', 
-                         current_price = '$current_price', 
-                         discount_rate = '$discount_rate', 
-                         discounted_price = '$discounted_price', 
-                         offer_image = '$offer_image', 
-                         description = '$description', 
-                         status = '$offer_status'
-                     WHERE id = '$offer_id'";
+    if (!empty($title) && $category_id > 0 && $current_price > 0) {
+        $updated = db_execute(
+            $conn,
+            "UPDATE tbl_offer SET title = ?, offer_category_id = ?, offer_type_id = ?, duration = ?, current_price = ?, discount_rate = ?, discounted_price = ?, offer_image = ?, description = ?, status = ? WHERE id = ?",
+            [$title, $category_id, $service_id, $duration, $current_price, $discount_rate, $discounted_price, $offer_image, $description, $status, $offer_id],
+            "siisdddsssi"
+        );
 
-    if (mysqli_query($conn, $update_query)) {
-        // Redirect with success message
-        header("Location: " . SITEURL . 'admin/manage-offers.php?status=success&action=update-offer');
+        if ($updated) {
+            header("Location: manage-offers.php?status=success&action=update-offer");
+            exit();
+        } else {
+            $error_msg = "Database error updating offer.";
+        }
     } else {
-        // Redirect with error message
-        header("Location: " . SITEURL . 'admin/manage-offers.php?status=error&action=update-offer');
+        $error_msg = "Please fill out all required fields.";
     }
 }
 
+// Fetch categories
+$categories = db_fetch_all($conn, "SELECT * FROM tbl_category ORDER BY category_name ASC");
+$services = db_fetch_all($conn, "SELECT id, service_type, booking_price FROM tbl_service WHERE category_id = ? ORDER BY service_type ASC", [intval($offer['offer_category_id'])], "i");
+
+include('partials/main.php'); 
 ?>
 
-<div class="main-content">
- 
-
-    <!-- Form for updating the offer -->
-    <form action="" method="POST" enctype="multipart/form-data" class="add-service-form">
-    <h2 class="text_center">Update Offers</h2>
-
-        <!-- Offer Title -->
-        <div class="input-field">
-            <label for="offer-title">Offer Title:</label>
-            <input type="text" id="offer-title" name="offer-title" value="<?php echo $offer['title']; ?>" placeholder="Enter offer title" required />
+<div class="admin-card" style="max-width: 720px; margin: 0 auto;">
+    <div class="admin-card-header">
+        <div>
+            <h2 class="main-welcome" style="margin-bottom: 4px;">Edit Special Promotion</h2>
+            <p style="color: var(--fn-text-muted); font-size: 14px; margin: 0;">Modify promotional pricing, discount rates, duration, and campaign status.</p>
         </div>
+        <a href="manage-offers.php" class="btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back to Offers
+        </a>
+    </div>
 
-        <!-- Offer Category -->
-        <div class="input-field">
-            <label for="offer-category">Offer category:</label>
-            <select id="offer-category" name="offer_category" onchange="fetchServicesForUpdate()" required>
-                <option value="">Select Offer Category</option>
-                <?php
-                // Fetch all categories for the dropdown
-                $category_query = "SELECT * FROM tbl_category";
-                $category_result = mysqli_query($conn, $category_query);
-                while ($category_row = mysqli_fetch_assoc($category_result)) {
-                    $selected = ($category_row['id'] == $offer['offer_category_id']) ? 'selected' : '';
-                    echo "<option value='" . $category_row['id'] . "' $selected>" . $category_row['category_name'] . "</option>";
-                }
-                ?>
-            </select>
-        </div>
+    <?php if (!empty($error_msg)): ?>
+        <div class="alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <?php echo htmlspecialchars($error_msg); ?></div>
+    <?php endif; ?>
 
-        <!-- Offer Type -->
-        <div class="input-field">
-            <label for="offer-type">Offer type:</label>
-            <select id="offer-type" name="offer_type" onchange="fetchServicePriceForUpdate()" required>
-                <option value="">Select Offer Type</option>
-                <?php
-                // Fetch all services for the dropdown
-                $service_query = "SELECT * FROM tbl_service WHERE category_id = '" . $offer['offer_category_id'] . "'";
-                $service_result = mysqli_query($conn, $service_query);
-                while ($service_row = mysqli_fetch_assoc($service_result)) {
-                    $selected = ($service_row['id'] == $offer['offer_type_id']) ? 'selected' : '';
-                    echo "<option value='" . $service_row['id'] . "' data-price='" . $service_row['booking_price'] . "' $selected>" . $service_row['service_type'] . "</option>";
-                }
-                ?>
-            </select>
-        </div>
-
-        <!-- Offer Description -->
+    <form action="" method="POST" enctype="multipart/form-data">
         <div class="form-group">
-            <label for="description">Offer Description:</label>
-            <textarea id="description" name="description" placeholder="Enter Offer Description" rows="4" cols="89" required><?php echo $offer['description']; ?></textarea>
+            <label for="title">Offer Title</label>
+            <input type="text" id="title" name="title" value="<?php echo htmlspecialchars($offer['title']); ?>" required />
         </div>
 
-        <!-- Offer Duration -->
-        <div class="input-field">
-            <label for="offer-duration">Offer Duration:</label>
-            <input type="text" id="offer-duration" name="offer-duration" value="<?php echo $offer['duration']; ?>" placeholder="Enter offer duration" required />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+                <label for="category-select">Trade Category</label>
+                <select id="category-select" name="offer_category_id" onchange="fetchServices(this.value)" required>
+                    <?php foreach ($categories as $cat): ?>
+                        <option value="<?php echo $cat['id']; ?>" <?php echo ($offer['offer_category_id'] == $cat['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($cat['category_name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="service-type">Applicable Service</label>
+                <select id="service-type" name="offer_type_id" onchange="fetchServicePrice()" required>
+                    <?php foreach ($services as $srv): ?>
+                        <option value="<?php echo $srv['id']; ?>" data-price="<?php echo $srv['booking_price']; ?>" <?php echo ($offer['offer_type_id'] == $srv['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($srv['service_type']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </div>
 
-        <!-- Current Price -->
-        <div class="input-field">
-            <label for="current-price">Current Price:</label>
-            <input type="number" id="current-price" name="current-price" value="<?php echo $offer['current_price']; ?>" placeholder="Enter current price" required />
+        <div class="form-group">
+            <label for="duration">Promotion Validity / Duration</label>
+            <input type="text" id="duration" name="duration" value="<?php echo htmlspecialchars($offer['duration']); ?>" required />
         </div>
 
-        <!-- Discount Rate -->
-        <div class="input-field">
-            <label for="discount-rate">Discount Rate (%):</label>
-            <input type="number" id="discount-rate" name="discount-rate" value="<?php echo $offer['discount_rate']; ?>" placeholder="Enter discount rate" required oninput="calculateDiscountedPriceForUpdate()" />
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+                <label for="current_price">Standard Price (Rs.)</label>
+                <input type="number" id="current_price" name="current_price" value="<?php echo htmlspecialchars($offer['current_price']); ?>" step="0.01" min="0" oninput="calculateDiscountedPrice()" required />
+            </div>
+
+            <div class="form-group">
+                <label for="discount_rate">Discount Rate (%)</label>
+                <input type="number" id="discount_rate" name="discount_rate" value="<?php echo htmlspecialchars($offer['discount_rate']); ?>" step="0.01" min="0" max="100" oninput="calculateDiscountedPrice()" required />
+            </div>
+
+            <div class="form-group">
+                <label for="discounted_price">Final Promo Price (Rs.)</label>
+                <input type="number" id="discounted_price" name="discounted_price" value="<?php echo htmlspecialchars($offer['discounted_price']); ?>" step="0.01" min="0" required />
+            </div>
         </div>
 
-        <!-- Discounted Price -->
-        <div class="input-field">
-            <label for="discounted-price">Discounted Price:</label>
-            <input type="number" id="discounted-price" name="discounted-price" value="<?php echo $offer['discounted_price']; ?>" placeholder="Enter discounted price" required />
+        <div class="form-group">
+            <label for="description">Detailed Description</label>
+            <textarea id="description" name="description" rows="3" required><?php echo htmlspecialchars($offer['description']); ?></textarea>
         </div>
 
-        <!-- Offer Image -->
-        <div class="input-field">
-            <label for="offer-image">Offer Image:</label>
-            <input type="file" id="offer-image" name="offer-image" accept="image/*" />
-            <!-- Display current image if available -->
-            <img src="../images/offer_images/<?php echo $offer['offer_image']; ?>" alt="Current Offer Image" class="offer_image" />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+                <label for="offer_image">Promotional Banner Visual</label>
+                <?php if (!empty($offer['offer_image'])): ?>
+                    <div style="margin-bottom: 8px;">
+                        <img src="../images/offer_images/<?php echo $offer['offer_image']; ?>" alt="" style="width: 80px; height: 50px; object-fit: cover; border-radius: 6px;" onerror="this.style.display='none';">
+                    </div>
+                <?php endif; ?>
+                <input type="file" id="offer_image" name="offer_image" accept="image/*" />
+            </div>
+
+            <div class="form-group">
+                <label for="offer_status">Campaign Status</label>
+                <select id="offer_status" name="offer_status" required>
+                    <option value="active" <?php echo ($offer['status'] == 'active') ? 'selected' : ''; ?>>Active (Visible)</option>
+                    <option value="inactive" <?php echo ($offer['status'] == 'inactive') ? 'selected' : ''; ?>>Inactive (Hidden)</option>
+                </select>
+            </div>
         </div>
 
-        <!-- Offer Status -->
-        <div class="input-field">
-            <label for="offer-status">Offer Status:</label>
-            <select id="offer-status" name="offer-status" required>
-                <option value="active" <?php if ($offer['status'] == 'active') echo 'selected'; ?>>Active</option>
-                <option value="inactive" <?php if ($offer['status'] == 'inactive') echo 'selected'; ?>>Inactive</option>
-            </select>
-        </div>
-
-        <!-- Hidden field for Offer ID -->
-        <input type="hidden" name="offer-id" value="<?php echo $offer['id']; ?>" />
-
-        <!-- Submit Button -->
-        <div class="input-field">
-            <button type="submit" name="submit-offer" class="btn-primary">Update Offer</button>
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+            <button type="submit" name="submit-update-offer" class="btn-primary">
+                <i class="fa-solid fa-check"></i> Save Promotion Changes
+            </button>
+            <a href="manage-offers.php" class="btn-secondary">Cancel</a>
         </div>
     </form>
-
 </div>
 
-<?php include('partials/footer.php'); ?>
+<script>
+function fetchServices(categoryId) {
+    const serviceSelect = document.getElementById('service-type');
+    serviceSelect.innerHTML = '<option value="">Loading services...</option>';
+
+    if (!categoryId) {
+        serviceSelect.innerHTML = '<option value="">Select Category First</option>';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('category_id', categoryId);
+
+    fetch('fetch_services_update.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.text())
+    .then(html => {
+        serviceSelect.innerHTML = html;
+    })
+    .catch(err => {
+        serviceSelect.innerHTML = '<option value="">Error loading services</option>';
+    });
+}
+
+function fetchServicePrice() {
+    const serviceSelect = document.getElementById('service-type');
+    const selectedOption = serviceSelect.options[serviceSelect.selectedIndex];
+    const price = selectedOption.getAttribute('data-price');
+    if (price) {
+        document.getElementById('current_price').value = parseFloat(price).toFixed(2);
+        calculateDiscountedPrice();
+    }
+}
+
+function calculateDiscountedPrice() {
+    const cur = parseFloat(document.getElementById('current_price').value) || 0;
+    const disc = parseFloat(document.getElementById('discount_rate').value) || 0;
+    if (cur > 0 && disc >= 0) {
+        const discounted = cur * (1 - (disc / 100));
+        document.getElementById('discounted_price').value = discounted.toFixed(2);
+    }
+}
+</script>
+
+<?php 
+include('partials/footer.php'); 
+?>
