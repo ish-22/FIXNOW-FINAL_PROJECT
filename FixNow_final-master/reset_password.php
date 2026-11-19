@@ -16,21 +16,21 @@ if (isset($_POST['reset_password'])) {
     if (strlen($new_password) < 4) {
         $error = "Password must be at least 4 characters.";
     } else {
-        $hashed_password = md5($new_password); // Encrypt password
+        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT); // Secure Bcrypt hash
 
         if ($user_type == "customer") {
-            $query = "UPDATE tbl_customer SET cus_password = '$hashed_password' WHERE cus_email = '$email'";
+            $up_res = db_execute($conn, "UPDATE tbl_customer SET cus_password = ? WHERE cus_email = ?", [$hashed_password, $email], "ss");
         } else {
-            $query = "UPDATE tbl_service_providers SET password = '$hashed_password' WHERE email = '$email'";
+            $up_res = db_execute($conn, "UPDATE tbl_service_providers SET password = ? WHERE email = ?", [$hashed_password, $email], "ss");
         }
 
-        if (mysqli_query($conn, $query)) {
+        if ($up_res['success']) {
             unset($_SESSION['reset_email']);
             unset($_SESSION['user_type']);
             header("Location: signin.php?message=Password changed successfully. Please log in.");
             exit();
         } else {
-            $error = "Error updating password.";
+            $error = "Error updating password: " . $up_res['error'];
         }
     }
 }

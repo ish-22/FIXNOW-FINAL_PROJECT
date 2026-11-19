@@ -1,21 +1,14 @@
-
 <?php
 include('./config/constant.php');
+header('Content-Type: application/json; charset=utf-8');
 
-// Check if the district_id is passed
-if (isset($_GET['district_id'])) {
-    $district_id = $_GET['district_id'];
+$district_id = isset($_GET['district_id']) ? intval($_GET['district_id']) : 0;
 
-    // Fetch towns for the selected district
-    $query = "SELECT * FROM tbl_towns WHERE district_id = '$district_id'";
-    $result = mysqli_query($conn, $query);
-
-    $towns = [];
-    while ($row = mysqli_fetch_assoc($result)) {
-        $towns[] = $row;
-    }
-
-    // Return the towns as a JSON response
-    echo json_encode($towns);
+$towns = [];
+if ($district_id > 0) {
+    $towns = db_fetch_all($conn, "SELECT id, town_name FROM tbl_towns WHERE district_id = ? ORDER BY town_name ASC", [$district_id], "i");
 }
+
+echo json_encode($towns);
+exit();
 ?>

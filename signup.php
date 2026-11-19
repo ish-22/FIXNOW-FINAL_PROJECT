@@ -29,7 +29,8 @@ if (isset($_POST['submit'])) {
         $alert_message = "This email is already registered as a service provider. Please use another email or sign in.";
         $alert_type = "error";
     } else {
-        $encrypted_password = md5($password);
+        // Industry-standard Bcrypt password hash
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
         $vendor_image = "";
 
         if (isset($_FILES['vendor_image']) && $_FILES['vendor_image']['name'] != "") {
@@ -44,17 +45,27 @@ if (isset($_POST['submit'])) {
             }
         }
 
-        $query = "INSERT INTO tbl_service_providers (full_name, email, contact_no, password, district_id, town_id, category_id, servicetype_id, experience, available_dates_and_times, about_you, registration_fee_paid, vendor_image, status) 
-                  VALUES ('$full_name', '$email', '$contact_no', '$encrypted_password', $district_id, $town_id, $category_id, $servicetype_id, '$experience', '$available_dates_and_times', '$about_you', 'no', '$vendor_image', 'Pending')";
+        // Auto-generate unique registration code (e.g. REG-1005)
+        $next_id_row = db_fetch_one($conn, "SELECT MAX(id) AS max_id FROM tbl_service_providers");
+        $next_id = ($next_id_row && $next_id_row['max_id']) ? intval($next_id_row['max_id']) + 1 : 1;
+        $registration_code = "REG" . (1000 + $next_id);
 
-        if (mysqli_query($conn, $query)) {
-            $service_provider_id = mysqli_insert_id($conn);
+        $insert_res = db_execute(
+            $conn,
+            "INSERT INTO tbl_service_providers (registration_code, full_name, email, contact_no, password, district_id, town_id, category_id, servicetype_id, experience, available_dates_and_times, about_you, registration_fee_paid, vendor_image, status) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'no', ?, 'Pending')",
+            [$registration_code, $full_name, $email, $contact_no, $hashed_password, $district_id, $town_id, $category_id, $servicetype_id, $experience, $available_dates_and_times, $about_you, $vendor_image],
+            "ssssiiiiissss"
+        );
+
+        if ($insert_res['success']) {
+            $service_provider_id = $insert_res['insert_id'];
             $feedback_url = SITEURL . "service-vendor/feedback.php?service_provider_id=" . $service_provider_id;
-            mysqli_query($conn, "UPDATE tbl_service_providers SET feedback_url = '$feedback_url' WHERE id = '$service_provider_id'");
+            db_execute($conn, "UPDATE tbl_service_providers SET feedback_url = ? WHERE id = ?", [$feedback_url, $service_provider_id], "si");
             header("Location: registration-payment.php?service_provider_id=" . $service_provider_id);
             exit();
         } else {
-            $alert_message = "Error registering service provider: " . mysqli_error($conn);
+            $alert_message = "Error registering service provider: " . $insert_res['error'];
             $alert_type = "error";
         }
     }
@@ -62,10 +73,10 @@ if (isset($_POST['submit'])) {
 
 // Handle the form submission for customer registration
 if (isset($_POST['submit_customer'])) {
-    $cus_name = mysqli_real_escape_string($conn, trim($_POST['cus_name']));
-    $cus_email = mysqli_real_escape_string($conn, trim($_POST['cus_email']));
-    $cus_phone = mysqli_real_escape_string($conn, trim($_POST['cus_phone']));
-    $cus_address = mysqli_real_escape_string($conn, trim($_POST['cus_address']));
+    $cus_name = trim($_POST['cus_name']);
+    $cus_email = trim($_POST['cus_email']);
+    $cus_phone = trim($_POST['cus_phone']);
+    $cus_address = trim($_POST['cus_address']);
     $cus_password = $_POST['cus_password'];
     $district_id = intval($_POST['district_id']);
     $town_id = intval($_POST['town_id']);
@@ -74,15 +85,22 @@ if (isset($_POST['submit_customer'])) {
         $alert_message = "This email is already registered as a customer. Please sign in or use another email.";
         $alert_type = "error";
     } else {
-        $encrypted_password = md5($cus_password);
-        $query = "INSERT INTO tbl_customer (cus_name, cus_email, cus_phone, cus_address, cus_password, district_id, town_id, registration_date) 
-                  VALUES ('$cus_name', '$cus_email', '$cus_phone', '$cus_address', '$encrypted_password', $district_id, $town_id, NOW())";
+        // Industry-standard Bcrypt password hash
+        $hashed_password = password_hash($cus_password, PASSWORD_DEFAULT);
 
-        if (mysqli_query($conn, $query)) {
+        $insert_cus = db_execute(
+            $conn,
+            "INSERT INTO tbl_customer (cus_name, cus_email, cus_phone, cus_address, cus_password, district_id, town_id, registration_date) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())",
+            [$cus_name, $cus_email, $cus_phone, $cus_address, $hashed_password, $district_id, $town_id],
+            "sssssii"
+        );
+
+        if ($insert_cus['success']) {
             header("Location: " . SITEURL . 'signin.php?status=success&action=cus_registration');
             exit();
         } else {
-            $alert_message = "Error registering customer: " . mysqli_error($conn);
+            $alert_message = "Error registering customer: " . $insert_cus['error'];
             $alert_type = "error";
         }
     }

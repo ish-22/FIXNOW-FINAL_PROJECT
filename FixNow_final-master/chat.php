@@ -8,43 +8,35 @@ if (!isset($_SESSION['customer_id'])) {
     exit();
 }
 
-$customer_id = $_SESSION['customer_id']; 
-$vendor_id = $_GET['vendor_id'];
+$customer_id = intval($_SESSION['customer_id']); 
+$vendor_id = isset($_GET['vendor_id']) ? intval($_GET['vendor_id']) : 0;
 
-if (empty($vendor_id)) {
+if ($vendor_id <= 0) {
     echo "<p>Invalid vendor ID provided.</p>";
     exit;
 }
 
-$vendor_query = "SELECT * FROM tbl_service_providers WHERE id = '$vendor_id' AND status = 'Confirmed'";
-$vendor_result = mysqli_query($conn, $vendor_query);
+$vendor = db_fetch_one($conn, "SELECT * FROM tbl_service_providers WHERE id = ? AND status = 'Confirmed'", [$vendor_id], "i");
 
-if (mysqli_num_rows($vendor_result) === 0) {
+if (!$vendor) {
     echo "<p>No vendor found or the vendor is not confirmed.</p>";
     exit;
 }
 
-$vendor = mysqli_fetch_assoc($vendor_result);
-
 $query_chat_history = "SELECT * FROM tbl_chat_messages 
-                       WHERE (customer_id = '$customer_id' AND vendor_id = '$vendor_id') 
-                       OR (vendor_id = '$vendor_id' AND customer_id = '$customer_id') 
+                       WHERE (customer_id = ? AND vendor_id = ?) 
+                       OR (vendor_id = ? AND customer_id = ?) 
                        ORDER BY sent_at ASC";
+$chat_result = db_fetch_all($conn, $query_chat_history, [$customer_id, $vendor_id, $vendor_id, $customer_id], "iiii");
 
-$chat_result = mysqli_query($conn, $query_chat_history);
-
-$query_update_status = "UPDATE tbl_chat_messages SET status = 'read' WHERE customer_id = '$customer_id' AND vendor_id = '$vendor_id' AND status = 'sent'";
-mysqli_query($conn, $query_update_status);
+db_execute($conn, "UPDATE tbl_chat_messages SET status = 'read' WHERE customer_id = ? AND vendor_id = ? AND status = 'sent'", [$customer_id, $vendor_id], "ii");
 
 if (isset($_POST['send_message'])) {
-    $message = mysqli_real_escape_string($conn, $_POST['message']);
-    $query_insert_message = "INSERT INTO tbl_chat_messages (customer_id, vendor_id, message, status) 
-                             VALUES ('$customer_id', '$vendor_id', '$message', 'sent')";
-    
-    if (mysqli_query($conn, $query_insert_message)) {
-        echo "<script>alert('Message sent successfully!'); window.location.href = 'chat.php?vendor_id=$vendor_id';</script>";
-    } else {
-        echo "<script>alert('Failed to send message.');</script>";
+    $message = trim($_POST['message'] ?? '');
+    if (!empty($message)) {
+        db_execute($conn, "INSERT INTO tbl_chat_messages (customer_id, vendor_id, message, status) VALUES (?, ?, ?, 'sent')", [$customer_id, $vendor_id, $message], "iis");
+        header("Location: chat.php?vendor_id=$vendor_id");
+        exit();
     }
 }
 ?>
@@ -258,15 +250,17 @@ if (isset($_POST['send_message'])) {
     <div class="chat-box">
         <?php
         // Display chat history - only show the logged-in customer's messages and vendor's replies
-        while ($chat = mysqli_fetch_assoc($chat_result)) {
-            // Display the customer's message (from the message field)
-            if ($chat['customer_id'] == $customer_id && !empty($chat['message'])) {
-                echo "<div class='message'><strong>You:</strong> " . htmlspecialchars($chat['message']) . "</div>";
-            }
+        if (!empty($chat_result)) {
+            foreach ($chat_result as $chat) {
+                // Display the customer's message (from the message field)
+                if ($chat['customer_id'] == $customer_id && !empty($chat['message'])) {
+                    echo "<div class='message'><strong>You:</strong> " . htmlspecialchars($chat['message']) . "</div>";
+                }
 
-            // Display the vendor's reply (from the vendor_reply field)
-            if ($chat['vendor_id'] == $vendor_id && !empty($chat['vendor_reply'])) {
-                echo "<div class='message'><strong>" . htmlspecialchars($vendor['full_name']) . " (Reply):</strong> " . htmlspecialchars($chat['vendor_reply']) . "</div>";
+                // Display the vendor's reply (from the vendor_reply field)
+                if ($chat['vendor_id'] == $vendor_id && !empty($chat['vendor_reply'])) {
+                    echo "<div class='message'><strong>" . htmlspecialchars($vendor['full_name']) . " (Reply):</strong> " . htmlspecialchars($chat['vendor_reply']) . "</div>";
+                }
             }
         }
         ?>

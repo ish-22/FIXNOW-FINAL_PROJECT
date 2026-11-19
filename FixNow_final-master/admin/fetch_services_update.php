@@ -1,20 +1,14 @@
 <?php
-// Include the database connection file
 include('partials/main.php');
 
-// Check if category ID is passed
 if (isset($_POST['category_id'])) {
-    $category_id = $_POST['category_id'];
+    $category_id = intval($_POST['category_id']);
 
-    // Fetch services based on selected category
-    $service_query = "SELECT * FROM tbl_service WHERE category_id = '$category_id'";
-    $service_result = mysqli_query($conn, $service_query);
+    $services = db_fetch_all($conn, "SELECT id, service_type, booking_price FROM tbl_service WHERE category_id = ? ORDER BY service_type ASC", [$category_id], "i");
 
-    if (mysqli_num_rows($service_result) > 0) {
-        // Loop through services and create options
-        while ($service = mysqli_fetch_assoc($service_result)) {
-            // Output the option element with price as data attribute
-            echo '<option value="' . $service['id'] . '" data-price="' . $service['booking_price'] . '">' . $service['service_type'] . '</option>';
+    if (!empty($services)) {
+        foreach ($services as $service) {
+            echo '<option value="' . htmlspecialchars($service['id']) . '" data-price="' . htmlspecialchars($service['booking_price']) . '">' . htmlspecialchars($service['service_type']) . '</option>';
         }
     } else {
         echo '<option value="">No services available</option>';

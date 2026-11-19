@@ -17,5 +17,9 @@ if (!$conn) {
     exit(); 
 }
 
+// Include parameterized DB helper functions
+require_once __DIR__ . '/db_helper.php';
+
+
 
 

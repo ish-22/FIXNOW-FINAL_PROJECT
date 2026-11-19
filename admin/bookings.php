@@ -23,8 +23,9 @@ $result = mysqli_query($conn, $query);
             <th>Provider Name</th>
             <th>Customer Email</th>
             <th>Customer Name</th>
-            <th>Booking Date</th>
-            <th>Booking Amount</th>
+            <th>Booking Schedule</th>
+            <th>Total Amount</th>
+            <th>Platform Fee</th>
             <th>Booking Status</th>
             <th>Task Status</th>
         </tr>
@@ -38,7 +39,9 @@ $result = mysqli_query($conn, $query);
                 $customer_email = $row['email'];
                 $customer_name = $row['customer_name'];
                 $booking_date = $row['booking_date'];
+                $time_slot = !empty($row['time_slot']) ? $row['time_slot'] : '09:00 AM - 11:00 AM';
                 $total_amount = $row['total_amount'];
+                $platform_fee = $row['platform_fee'] > 0 ? $row['platform_fee'] : round($total_amount * 0.10, 2);
                 $booking_status = $row['booking_status']; 
                 $task_status = $row['task_status']; 
         ?>
@@ -48,8 +51,9 @@ $result = mysqli_query($conn, $query);
             <td><?php echo $provider_name; ?></td>
             <td><?php echo $customer_email; ?></td>
             <td><?php echo $customer_name; ?></td>
-            <td><?php echo $booking_date; ?></td>
+            <td><?php echo $booking_date . '<br><small style="color:#666;">' . $time_slot . '</small>'; ?></td>
             <td><?php echo "Rs. " . number_format($total_amount, 2); ?></td>
+            <td><strong style="color: #2e7d32;"><?php echo "Rs. " . number_format($platform_fee, 2); ?></strong></td>
             <td>
                 <span class="status-label" style="
                     padding: 3px 6px;

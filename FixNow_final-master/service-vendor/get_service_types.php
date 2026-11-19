@@ -1,19 +1,14 @@
 <?php
 include('../config/constant.php');
+header('Content-Type: application/json; charset=utf-8');
 
-if (isset($_GET['category_id'])) {
-    $category_id = $_GET['category_id'];
-    $query = "SELECT * FROM tbl_service WHERE category_id = ?";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("i", $category_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
+$category_id = isset($_GET['category_id']) ? intval($_GET['category_id']) : 0;
 
-    $service_types = [];
-    while ($row = $result->fetch_assoc()) {
-        $service_types[] = $row;
-    }
-
-    echo json_encode($service_types);
+$service_types = [];
+if ($category_id > 0) {
+    $service_types = db_fetch_all($conn, "SELECT id, category_id, service_type, about_service, service_image, booking_price FROM tbl_service WHERE category_id = ? ORDER BY service_type ASC", [$category_id], "i");
 }
+
+echo json_encode($service_types);
+exit();
 ?>

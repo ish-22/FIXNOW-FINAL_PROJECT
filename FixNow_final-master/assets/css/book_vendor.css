@@ -1,10 +1,10 @@
+/* Modern Booking Screen Styling */
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'League Spartan', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     margin: 0;
-    padding: 0;
-    background: url('https://media.giphy.com/media/BHNfhgU63qrks/giphy.gif?cid=ecf05e47gs8juvz6gqrfrfs7kc86bon2su9g4tna6frmvflq&ep=v1_gifs_search&rid=giphy.gif&ct=g') no-repeat center center fixed;
-    background-size: cover;
-    color: #333;
+    padding: 40px 15px;
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #90caf9 100%);
+    color: #334155;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -12,156 +12,142 @@ body {
 }
 
 .form-container {
-    max-width: 600px;
-    padding: 30px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 15px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-width: 640px;
+    width: 100%;
+    padding: 35px 30px;
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 15px 35px rgba(0, 50, 120, 0.12);
+    border: 1px solid #dbeafe;
+}
+
+.back-button {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 20px;
+}
+
+.back-button:hover {
+    background: #e2e8f0;
+    color: #0f172a;
 }
 
 .form-header {
     text-align: center;
-    margin-bottom: 30px;
+    margin-bottom: 24px;
 }
 
 .form-header img {
-    max-width: 120px;
+    width: 90px;
+    height: 90px;
     border-radius: 50%;
-    margin-bottom: 15px;
-    border: 3px solid #4CAF50;
+    object-fit: cover;
+    margin-bottom: 12px;
+    border: 3px solid #0284c7;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
 }
 
 .form-header h1 {
     font-size: 1.8rem;
-    margin: 0;
-    color: #fff;
+    font-weight: 800;
+    margin: 0 0 6px 0;
+    color: #0f172a;
 }
 
 .form-header p {
-    font-size: 1rem;
-    color: #ddd;
-    margin-top: 5px;
+    font-size: 14.5px;
+    color: #64748b;
+    margin: 0;
 }
 
 .booking-details {
-    background: rgba(255, 255, 255, 0.3);
-    padding: 15px;
-    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 14px 16px;
+    border-radius: 10px;
     margin-bottom: 20px;
-    font-size: 0.95rem;
+    font-size: 14px;
     line-height: 1.6;
-    color: #fff;
+    color: #334155;
 }
 
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 18px;
 }
 
 label {
     display: flex;
     align-items: center;
-    font-weight: bold;
-    margin-bottom: 8px;
-    color: #fff;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 6px;
+    color: #1e293b;
 }
 
 label i {
-    margin-right: 10px;
-    color: #4CAF50;
+    color: #0284c7;
+    font-size: 14px;
 }
 
 input[type="text"],
-input[type="tel"],
-input[type="date"],
 input[type="email"],
-textarea {
+input[type="tel"],
+textarea,
+select {
     width: 100%;
-    padding: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 5px;
+    padding: 12px 14px;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14.5px;
+    font-family: inherit;
+    color: #1e293b;
+    background: #ffffff;
     box-sizing: border-box;
-    font-size: 1rem;
-    background: rgba(255, 255, 255, 0.2);
-    color: #fff;
-    backdrop-filter: blur(5px);
-    transition: all 0.3s ease;
+    outline: none;
+    transition: all 0.2s;
 }
 
 input:focus,
-textarea:focus {
-    border-color: #4CAF50;
-    outline: none;
-    background: rgba(255, 255, 255, 0.4);
+textarea:focus,
+select:focus {
+    border-color: #0284c7;
+    box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
 textarea {
     resize: vertical;
-    min-height: 100px;
+    min-height: 80px;
 }
 
-.payment-link a {
-    color: #4CAF50;
-    text-decoration: none;
-    font-weight: bold;
-}
-
-.payment-link a:hover {
-    text-decoration: underline;
-}
-
-.form-button .btn-primary {
-    display: block;
+.submit-button {
     width: 100%;
-    background-color: #4CAF50;
-    color: #fff;
-    padding: 15px;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
-    cursor: pointer;
-    font-weight: bold;
-    transition: all 0.3s ease;
-}
-
-.form-button .btn-primary:hover {
-    background-color: #45a049;
-    transform: scale(1.05);
-}
-
-
-/* Back Button Styling */
-.back-button {
-    background-color: #aa00ff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
+    background: linear-gradient(135deg, #0284c7, #0369a1);
+    color: #ffffff;
     font-size: 16px;
-    border-radius: 5px;
+    font-weight: 700;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
-    position: fixed;
-    display: inline;
-    left: 10%;
-    left: 10px;
-    transform: translateY(-50%);
-  }
-  
-  .back-button:hover {
-    background-color: #0056b3;
-  }
+    box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+    transition: all 0.2s;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
 
-@media (max-width: 768px) {
-    .form-container {
-        padding: 20px;
-        margin: 20px;
-    }
-
-    .form-header img {
-        max-width: 100px;
-    }
-
-    .form-header h1 {
-        font-size: 1.5rem;
-    }
+.submit-button:hover {
+    background: linear-gradient(135deg, #0369a1, #075985);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(2, 132, 199, 0.45);
 }
