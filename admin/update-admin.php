@@ -1,90 +1,96 @@
 <?php 
-include('partials/main.php'); 
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Ensure that an ID is provided in the URL
-if (isset($_GET['id'])) {
-    $id = $_GET['id']; // Get the admin ID from the URL parameter
-} else {
-    // Redirect if no ID is provided
-    header('Location: manage-admin.php');
-    exit;
+if (!isset($_GET['id'])) {
+    header('Location: manage-user.php');
+    exit();
 }
 
-// Fetch current data for the given admin ID from the database
-$sql = "SELECT * FROM tbl_admin WHERE id = ?";
-$stmt = $conn->prepare($sql);
-$stmt->bind_param('i', $id);
-$stmt->execute();
-$result = $stmt->get_result();
+$id = intval($_GET['id']);
+$admin = db_fetch_one($conn, "SELECT * FROM tbl_admin WHERE id = ?", [$id], "i");
 
-if ($result->num_rows == 1) {
-    $row = $result->fetch_assoc();
-    $full_name = $row['full_name'];
-    $username = $row['username'];
-    $email = $row['email'];
-} else {
-    // Redirect if no matching admin found
-    header('Location: manage-admin.php');
-    exit;
+if (!$admin) {
+    header('Location: manage-user.php');
+    exit();
 }
 
-?>
-
-<div class="main-content">
-    <div class="wrapper">
-     
-        <br />
-
-        <!-- Form for managing admin details -->
-        <form action="" method="POST" class="form-container">
-        <h1 class="text_center">Update Admin</h1>
-            <div class="input-field">
-                <label for="full-name">Full Name:</label>
-                <input type="text" id="full-name" name="full-name" value="<?php echo $full_name; ?>" required />
-            </div>
-
-            <div class="input-field">
-                <label for="username">Username:</label>
-                <input type="text" id="username" name="username" value="<?php echo $username; ?>" required />
-            </div>
-
-            <div class="input-field">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" value="<?php echo $email; ?>" required />
-            </div>
-
-            <!-- Hidden field for ID to identify the specific admin -->
-            <input type="hidden" name="admin-id" value="<?php echo $id; ?>" />
-
-            <div class="input-field">
-                <input type="submit" name="submit" value="Update Admin" class="btn-primary">
-            </div>
-        </form>
-    </div>
-</div>
-
-<?php
-
-// Handle form submission
+$error_msg = '';
 if (isset($_POST['submit'])) {
-    // Get updated data from the form
-    $id = $_POST['admin-id']; // Get the admin ID
-    $full_name = $_POST['full-name'];
-    $username = $_POST['username'];
-    $email = $_POST['email'];
+    $full_name = trim($_POST['full_name'] ?? '');
+    $username = trim($_POST['username'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-    // Update the admin data in the database
-    $sql = "UPDATE tbl_admin SET full_name = ?, username = ?, email = ? WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('sssi', $full_name, $username, $email, $id);
+    if (!empty($full_name) && !empty($username) && !empty($email)) {
+        if (!empty($password)) {
+            $hashed = secure_password_hash($password);
+            $updated = db_execute($conn, "UPDATE tbl_admin SET full_name = ?, username = ?, email = ?, password = ? WHERE id = ?", [$full_name, $username, $email, $hashed, $id], "ssssi");
+        } else {
+            $updated = db_execute($conn, "UPDATE tbl_admin SET full_name = ?, username = ?, email = ? WHERE id = ?", [$full_name, $username, $email, $id], "sssi");
+        }
 
-    // Check if the update was successful
-    if ($stmt->execute()) {
-        header("Location: " . SITEURL . 'admin/manage-user.php?status=success&action=update');
+        if ($updated) {
+            header("Location: manage-user.php?status=success&action=update");
+            exit();
+        } else {
+            $error_msg = "Failed to update administrator details.";
+        }
     } else {
-        header("Location: " . SITEURL . 'admin/manage-user.php?status=error&action=update');
+        $error_msg = "Please fill out all required fields.";
     }
 }
 
+include('partials/main.php'); 
+?>
+
+<div class="admin-card" style="max-width: 680px; margin: 0 auto;">
+    <div class="admin-card-header">
+        <div>
+            <h2 class="main-welcome" style="margin-bottom: 4px;">Update Administrator Details</h2>
+            <p style="color: var(--fn-text-muted); font-size: 14px; margin: 0;">Modify administrator credentials and platform privileges.</p>
+        </div>
+        <a href="manage-user.php" class="btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back to Users
+        </a>
+    </div>
+
+    <?php if (!empty($error_msg)): ?>
+        <div class="alert-danger">
+            <i class="fa-solid fa-circle-exclamation"></i> <?php echo htmlspecialchars($error_msg); ?>
+        </div>
+    <?php endif; ?>
+
+    <form action="" method="POST">
+        <div class="form-group">
+            <label for="full_name">Full Name</label>
+            <input type="text" id="full_name" name="full_name" value="<?php echo htmlspecialchars($admin['full_name']); ?>" required />
+        </div>
+
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" value="<?php echo htmlspecialchars($admin['username']); ?>" required />
+        </div>
+
+        <div class="form-group">
+            <label for="email">Admin Email Address</label>
+            <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($admin['email']); ?>" required />
+        </div>
+
+        <div class="form-group">
+            <label for="password">Change Password <small style="font-weight: 400; color: #64748b;">(Leave blank to keep current password)</small></label>
+            <input type="password" id="password" name="password" placeholder="New password" />
+        </div>
+
+        <div style="margin-top: 28px; display: flex; gap: 12px;">
+            <button type="submit" name="submit" class="btn-primary">
+                <i class="fa-solid fa-check"></i> Save Changes
+            </button>
+            <a href="manage-user.php" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<?php 
 include('partials/footer.php'); 
 ?>

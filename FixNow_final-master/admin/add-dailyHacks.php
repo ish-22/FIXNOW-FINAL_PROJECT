@@ -1,81 +1,78 @@
 <?php
-// Include the database connection
-include('partials/main.php');
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Check if the form is submitted
-if (isset($_POST['submit'])) {
-    // Get form data
-    $title = $_POST['title'];
-    $description = $_POST['description'];
+$error_msg = '';
 
-    // Handle the image upload
-    $image = NULL;
-    if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-        $target_dir = "../images/hacks_images/"; // Set the directory where the images will be stored
-        $target_file = $target_dir . basename($_FILES["image"]["name"]);
+if (isset($_POST['submit-hack'])) {
+    $title = trim($_POST['title'] ?? '');
+    $description = trim($_POST['description'] ?? '');
 
-        // Check if the file is an image
-        if (getimagesize($_FILES["image"]["tmp_name"])) {
-            if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
-                $image = $target_file; // Save the image path to the image column
-            }
-        }
+    // Handle Image Upload
+    $image_name = '';
+    if (isset($_FILES['image']['name']) && $_FILES['image']['name'] != '') {
+        $ext = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
+        $image_name = "Hack_" . rand(1000, 9999) . "." . $ext;
+        $dest = "../images/hacks_images/" . $image_name;
+        move_uploaded_file($_FILES['image']['tmp_name'], $dest);
     }
 
-    // SQL query to insert the new hack into the database
-    $sql = "INSERT INTO tbl_dailyhacks (title, description, image) VALUES (?, ?, ?)";
-
-    // Prepare and bind parameters
-    if ($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param("sss", $title, $description, $image);
-
-        // Execute the query and check if the insert was successful
-        if ($stmt->execute()) {
+    if (!empty($title) && !empty($description)) {
+        $inserted = db_execute($conn, "INSERT INTO tbl_dailyhacks (title, description, image) VALUES (?, ?, ?)", [$title, $description, $image_name], "sss");
+        if ($inserted) {
             header("Location: manage-dailyHacks.php?status=success&action=add-hack");
+            exit();
         } else {
-            header("Location: manage-dailyHacks.php?status=error&action=add-hack");
+            $error_msg = "Database error saving hack.";
         }
     } else {
-        echo "Error preparing statement.";
+        $error_msg = "Please provide both article title and description.";
     }
-
-    // Close the database connection
-    mysqli_close($conn);
 }
+
+include('partials/main.php');
 ?>
 
-<div class="main-content">
-    <div class="wrapper">
-        <br />
-
-        <!-- Form for adding a new hack -->
-        <form action="" method="POST" enctype="multipart/form-data" class="add-service-form">
-            <h2>Add a New Hack</h2>
-
-            <!-- Hack Title -->
-            <div class="input-field">
-                <label for="hack-title">Hack Title:</label>
-                <input type="text" id="hack-title" name="title" placeholder="Enter hack title" required />
-            </div>
-
-            <!-- Hack Description -->
-            <div class="input-field">
-                <label for="hack-description">Hack Description:</label>
-                <textarea id="hack-description" name="description" placeholder="Enter hack description" rows="10" cols="89" required></textarea>
-            </div>
-
-            <!-- Hack Image -->
-            <div class="input-field">
-                <label for="hack-image">Hack Image (Optional):</label>
-                <input type="file" id="hack-image" name="image" accept="image/*" />
-            </div>
-
-            <!-- Submit Button -->
-            <div class="input-field">
-                <input type="submit" name="submit" value="Add Hack" class="btn-primary">
-            </div>
-        </form>
+<div class="admin-card" style="max-width: 680px; margin: 0 auto;">
+    <div class="admin-card-header">
+        <div>
+            <h2 class="main-welcome" style="margin-bottom: 4px;">Publish DIY Maintenance Hack</h2>
+            <p style="color: var(--fn-text-muted); font-size: 14px; margin: 0;">Share troubleshooting guides and home improvement advice with customers.</p>
+        </div>
+        <a href="manage-dailyHacks.php" class="btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back to Hacks
+        </a>
     </div>
+
+    <?php if (!empty($error_msg)): ?>
+        <div class="alert-danger"><i class="fa-solid fa-triangle-exclamation"></i> <?php echo htmlspecialchars($error_msg); ?></div>
+    <?php endif; ?>
+
+    <form action="" method="POST" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="title">Article Title</label>
+            <input type="text" id="title" name="title" placeholder="e.g. How to Safely Unclog a Sink Trap in 10 Minutes" required />
+        </div>
+
+        <div class="form-group">
+            <label for="description">Content &amp; Instructions</label>
+            <textarea id="description" name="description" placeholder="Write step-by-step DIY instructions and safety precautions..." rows="6" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="image">Featured Cover Image</label>
+            <input type="file" id="image" name="image" accept="image/*" />
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+            <button type="submit" name="submit-hack" class="btn-primary">
+                <i class="fa-solid fa-plus"></i> Publish Hack Article
+            </button>
+            <a href="manage-dailyHacks.php" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
 </div>
 
-<?php include('partials/footer.php'); ?>
+<?php 
+include('partials/footer.php'); 
+?>

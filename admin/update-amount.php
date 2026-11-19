@@ -1,53 +1,49 @@
 <?php 
-include('partials/main.php'); 
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Get the current payment fee to display
-$query = "SELECT * FROM tbl_payment ORDER BY id DESC LIMIT 1"; // Get the latest payment fee
-$result = mysqli_query($conn, $query);
-$payment = mysqli_fetch_assoc($result);
+// Fetch current fee
+$payment = db_fetch_one($conn, "SELECT * FROM tbl_payment ORDER BY id DESC LIMIT 1");
+$current_id = $payment ? $payment['id'] : 1;
 
-// Handle form submission for updating payment fee
 if (isset($_POST['submit'])) {
-    // Get the form data
-    $payment_amount = mysqli_real_escape_string($conn, $_POST['payment_amount']);
-
-    // Validate the input
-    if (empty($payment_amount)) {
-        // Handle error if fields are empty
-        echo "<script>alert('Please fill in the payment amount.');</script>";
-    } else {
-        // Prepare the SQL query to update the payment fee
-        $query = "UPDATE tbl_payment SET payment_amount = '$payment_amount' WHERE id = '{$payment['id']}'";
-
-        // Execute the query
-        if (mysqli_query($conn, $query)) {
-            // Redirect to the same page after successful update
-            echo "<script>
-                    alert('Payment fee updated successfully!');
-                    window.location.href = 'add-amount.php'; // Redirect to the manage payment fees page
-                  </script>";
-        } else {
-            // Handle query execution failure
-            echo "<script>alert('Error updating payment fee: " . mysqli_error($conn) . "');</script>";
-        }
+    $amount = floatval($_POST['payment_amount'] ?? 0.00);
+    if ($amount > 0) {
+        db_execute($conn, "UPDATE tbl_payment SET payment_amount = ? WHERE id = ?", [$amount, $current_id], "di");
+        header("Location: add-amount.php?status=success&action=fee_updated");
+        exit();
     }
 }
+
+include('partials/main.php'); 
 ?>
 
-<div class="main-content">
-    <div class="wrapper">
-        <h2 class="text_center">Update Payment Fee</h2>
-
-        <!-- Update Payment Fee Section as a Form -->
-        <form action="" method="POST" class="form-container">
-            <label for="payment_amount">Update Payment Fee:</label>
-            <input type="number" id="payment_amount" name="payment_amount" placeholder="Enter amount here" min="0" value="<?php echo $payment['payment_amount']; ?>" required>
-
-            <input type="submit" name="submit" value="Update Fee" class="btn-primary">
-        </form>
-
-
+<div class="admin-card" style="max-width: 600px; margin: 0 auto;">
+    <div class="admin-card-header">
+        <div>
+            <h2 class="main-welcome" style="margin-bottom: 4px;">Update Monthly Subscription Fee</h2>
+            <p style="color: var(--fn-text-muted); font-size: 14px; margin: 0;">Adjust recurring monthly platform dues charged to active specialists.</p>
+        </div>
+        <a href="add-amount.php" class="btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back to Pricing
+        </a>
     </div>
+
+    <form action="" method="POST">
+        <div class="form-group">
+            <label for="payment_amount">Monthly Platform Due (LKR)</label>
+            <input type="number" id="payment_amount" name="payment_amount" value="<?php echo htmlspecialchars($payment['payment_amount'] ?? '1500.00'); ?>" min="0" step="0.01" required>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+            <button type="submit" name="submit" class="btn-primary">
+                <i class="fa-solid fa-check"></i> Save New Rate
+            </button>
+            <a href="add-amount.php" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
 </div>
 
-<?php include('partials/footer.php'); ?>
+<?php 
+include('partials/footer.php'); 
+?>

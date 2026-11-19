@@ -1,61 +1,66 @@
 <?php 
-include('partials/main.php'); 
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Check if the form is submitted
+$msg = '';
+
+// Check if form is submitted
 if (isset($_POST['submit'])) {
-    $registration_fee = $_POST['fee_amount'];
+    $registration_fee = floatval($_POST['fee_amount'] ?? 0.00);
 
-    // Insert the registration fee into the tbl_registration_fees table
-    $sql = "INSERT INTO tbl_registration_fees (fee_amount) VALUES (?)"; // Adjust the table and column name as needed
-    if ($stmt = $conn->prepare($sql)) {
-        $stmt->bind_param("i", $registration_fee);
-        
-        if ($stmt->execute()) {
-            header("Location: " . SITEURL . 'admin/manage-registrationFee.php?status=success&action=add_fee');
-        } else {
-            header("Location: " . SITEURL . 'admin/manage-registrationFee.php?status=error&action=add_fee');
-        }
-
-        $stmt->close();
+    if ($registration_fee > 0) {
+        db_execute($conn, "INSERT INTO tbl_registration_fees (fee_amount) VALUES (?)", [$registration_fee], "d");
+        header("Location: manage-registrationFee.php?status=success&action=add_fee");
+        exit();
     }
 }
 
+// Fetch current fee
+$row = db_fetch_one($conn, "SELECT id, fee_amount FROM tbl_registration_fees ORDER BY id DESC LIMIT 1");
+$current_fee = $row ? floatval($row['fee_amount']) : 2500.00;
+
+include('partials/main.php'); 
 ?>
 
-<div class="main-content">
-    <div class="wrapper">
-      <br><br><br><br><br><br>
+<div class="admin-card" style="max-width: 600px; margin: 0 auto;">
+    <div class="admin-card-header">
+        <div>
+            <h2 class="main-welcome" style="margin-bottom: 4px;">Specialist Registration Fee</h2>
+            <p style="color: var(--fn-text-muted); font-size: 14px; margin: 0;">One-time onboarding and vetting fee required from new service providers.</p>
+        </div>
+        <a href="manage-invoice.php" class="btn-secondary">
+            <i class="fa-solid fa-arrow-left"></i> Back to Invoices
+        </a>
+    </div>
 
-        <!-- Add Registration Fee Section as a Form -->
-        <form action="" method="POST" class="form-container">
-            <label for="registration-fee" class="text_center">Add Registration Fee:</label>
-            <input type="number" id="registration-fee" name="fee_amount" placeholder="Enter amount here" min="0" required>
-            <input type="submit" name="submit" value="Add Fee" class="btn-primary">
-        </form>
+    <?php if (isset($_GET['status']) && $_GET['status'] == 'success'): ?>
+        <div class="alert-success">
+            <i class="fa-solid fa-circle-check"></i> Registration fee updated successfully!
+        </div>
+    <?php endif; ?>
 
-        <!-- Display Registration Fee and Action Buttons -->
-        <div class="registration-fee-display">
-            <?php
-            // Fetch the current registration fee from the tbl_registration_fees table
-            $sql = "SELECT id, fee_amount FROM tbl_registration_fees ORDER BY id DESC LIMIT 1"; // Fetch the latest fee
-            $result = mysqli_query($conn, $sql);
-
-            if ($result && mysqli_num_rows($result) > 0) {
-                $row = mysqli_fetch_assoc($result);
-                $fee_id = $row['id']; // Define the fee_id here
-                echo "<p>Current Registration Fee: <strong>" . $row['fee_amount'] . " /=</strong></p>";
-            } else {
-                echo "<p>No fee set yet.</p>";
-            }
-            ?>
-
-            <!-- Show Delete Button if fee_id is set -->
-            <?php if (isset($fee_id)): ?>
-                <a href="delete-fee.php?id=<?php echo $fee_id; ?>" class="btn-danger">Delete</a>
-            <?php endif; ?>
-
+    <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+        <span style="font-size: 12px; font-weight: 700; color: #059669; text-transform: uppercase;">Active Registration Charge</span>
+        <div style="font-size: 32px; font-weight: 800; color: #059669; margin-top: 4px;">
+            Rs. <?php echo number_format($current_fee, 2); ?>
         </div>
     </div>
+
+    <form action="" method="POST">
+        <div class="form-group">
+            <label for="fee_amount">Set New Registration Fee (LKR)</label>
+            <input type="number" id="fee_amount" name="fee_amount" placeholder="2500.00" min="0" step="0.01" required>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+            <button type="submit" name="submit" class="btn-primary">
+                <i class="fa-solid fa-check"></i> Save New Fee
+            </button>
+            <a href="manage-invoice.php" class="btn-secondary">Cancel</a>
+        </div>
+    </form>
 </div>
 
-<?php include('partials/footer.php'); ?>
+<?php 
+include('partials/footer.php'); 
+?>

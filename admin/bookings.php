@@ -12,104 +12,85 @@ $query = "SELECT tbl_booking.*, tbl_service.service_type, tbl_service_providers.
 $result = mysqli_query($conn, $query);
 ?>
 
-<div class="main-content">
-    <h2 class="main-welcome">All Bookings</h2>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <div>
+            <h2 class="main-welcome" style="margin-bottom: 4px;">Customer Booking Orders &amp; Escrow</h2>
+            <p style="color: var(--fn-text-muted); font-size: 14px; margin: 0;">Monitor dispatched orders, 10% platform protection fee, and vendor escrow releases.</p>
+        </div>
+    </div>
 
-    <!-- Bookings Table -->
     <table class="tbl-full">
-        <tr>
-            <th>S.N</th>
-            <th>Service Type</th>
-            <th>Provider Name</th>
-            <th>Customer Email</th>
-            <th>Customer Name</th>
-            <th>Booking Schedule</th>
-            <th>Total Amount</th>
-            <th>Platform Fee</th>
-            <th>Booking Status</th>
-            <th>Task Status</th>
-        </tr>
-
-        <?php 
-        if (mysqli_num_rows($result) > 0) {
-            $serial_number = 1;
-            while ($row = mysqli_fetch_assoc($result)) {
-                $service_type = $row['service_type'];
-                $provider_name = $row['provider_name'];
-                $customer_email = $row['email'];
-                $customer_name = $row['customer_name'];
-                $booking_date = $row['booking_date'];
-                $time_slot = !empty($row['time_slot']) ? $row['time_slot'] : '09:00 AM - 11:00 AM';
-                $total_amount = $row['total_amount'];
-                $platform_fee = $row['platform_fee'] > 0 ? $row['platform_fee'] : round($total_amount * 0.10, 2);
-                $booking_status = $row['booking_status']; 
-                $task_status = $row['task_status']; 
-        ?>
-        <tr>
-            <td><?php echo $serial_number++; ?></td>
-            <td><?php echo $service_type; ?></td>
-            <td><?php echo $provider_name; ?></td>
-            <td><?php echo $customer_email; ?></td>
-            <td><?php echo $customer_name; ?></td>
-            <td><?php echo $booking_date . '<br><small style="color:#666;">' . $time_slot . '</small>'; ?></td>
-            <td><?php echo "Rs. " . number_format($total_amount, 2); ?></td>
-            <td><strong style="color: #2e7d32;"><?php echo "Rs. " . number_format($platform_fee, 2); ?></strong></td>
-            <td>
-                <span class="status-label" style="
-                    padding: 3px 6px;
-                    font-weight: bold;
-                    border-radius: 5px;
-                    display: inline-block;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    text-align: center;
-                    min-width: 130px;
-                    <?php 
-                        if ($booking_status == 'Pending') {
-                            echo 'background-color: #ffebcc; color: #cc6600; border: 1px solid #cc6600;';
-                        } elseif ($booking_status == 'Cancelled') {
-                            echo 'background-color: #ffe6e6; color: #cc0000; border: 1px solid #cc0000;';
-                        } elseif ($booking_status == 'Confirmed') {
-                            echo 'background-color: #ccffcc; color: #008000; border: 1px solid #008000;';
-                        } elseif ($booking_status == 'Completed') {
-                            echo 'background-color: #cce5ff; color: #004085; border: 1px solid #004085;';
-                        }
-                    ?>
-                ">
-                    <?php echo $booking_status; ?>
-                </span>
-            </td>
-            <td>
-                <span class="status-label" style="
-                    padding: 3px 6px;
-                    font-weight: bold;
-                    border-radius: 5px;
-                    display: inline-block;
-                    text-transform: uppercase;
-                    letter-spacing: 0.5px;
-                    text-align: center;
-                    min-width: 130px;
-                    <?php 
-                        if ($task_status == 'Pending') {
-                            echo 'background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba;';
-                        } elseif ($task_status == 'In Progress') {
-                            echo 'background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;';
-                        } elseif ($task_status == 'Completed') {
-                            echo 'background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;';
-                        }
-                    ?>
-                ">
-                    <?php echo $task_status; ?>
-                </span>
-            </td>
-        </tr>
-        <?php 
+        <thead>
+            <tr>
+                <th>Order #</th>
+                <th>Service Requested</th>
+                <th>Assigned Specialist</th>
+                <th>Customer</th>
+                <th>Appointment Slot</th>
+                <th>Gross Escrow</th>
+                <th>Platform Net (10%)</th>
+                <th>Vendor Payout (90%)</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php 
+            if ($result && mysqli_num_rows($result) > 0) {
+                while ($row = mysqli_fetch_assoc($result)) {
+                    $service_type = $row['service_type'];
+                    $provider_name = $row['provider_name'];
+                    $customer_email = $row['email'];
+                    $customer_name = $row['customer_name'];
+                    $booking_date = $row['booking_date'];
+                    $time_slot = !empty($row['time_slot']) ? $row['time_slot'] : '09:00 AM - 12:00 PM';
+                    $total_amount = floatval($row['total_amount']);
+                    $platform_fee = $row['platform_fee'] > 0 ? floatval($row['platform_fee']) : round($total_amount * 0.10, 2);
+                    $vendor_payout = $row['vendor_payout'] > 0 ? floatval($row['vendor_payout']) : round($total_amount - $platform_fee, 2);
+                    $booking_status = $row['booking_status']; 
+                    $task_status = $row['task_status']; 
+                    
+                    $badge_class = 'status-pending';
+                    if ($booking_status == 'Confirmed') $badge_class = 'status-confirmed';
+                    elseif ($booking_status == 'Completed') $badge_class = 'status-completed';
+                    elseif ($booking_status == 'Cancelled') $badge_class = 'status-cancelled';
+            ?>
+            <tr>
+                <td style="font-weight: 700; color: #0284c7;">#BK-<?php echo $row['id']; ?></td>
+                <td>
+                    <strong style="color: #0f172a; display: block;"><?php echo htmlspecialchars($service_type); ?></strong>
+                </td>
+                <td>
+                    <span style="font-weight: 600; color: #334155;"><?php echo htmlspecialchars($provider_name); ?></span>
+                </td>
+                <td>
+                    <strong style="color: #0f172a; display: block;"><?php echo htmlspecialchars($customer_name); ?></strong>
+                    <small style="color: #64748b;"><?php echo htmlspecialchars($customer_email); ?></small>
+                </td>
+                <td>
+                    <div style="font-weight: 600; color: #0f172a;"><?php echo htmlspecialchars($booking_date); ?></div>
+                    <small style="color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; font-weight: 600;"><?php echo htmlspecialchars($time_slot); ?></small>
+                </td>
+                <td style="font-weight: 700; color: #0f172a;">Rs. <?php echo number_format($total_amount, 2); ?></td>
+                <td style="font-weight: 700; color: #10b981;">Rs. <?php echo number_format($platform_fee, 2); ?></td>
+                <td style="font-weight: 700; color: #6366f1;">Rs. <?php echo number_format($vendor_payout, 2); ?></td>
+                <td>
+                    <span class="status-label <?php echo $badge_class; ?>">
+                        <?php echo htmlspecialchars($booking_status); ?>
+                    </span>
+                    <div style="font-size: 11px; color: #64748b; margin-top: 4px;">Task: <?php echo htmlspecialchars($task_status); ?></div>
+                </td>
+            </tr>
+            <?php 
+                }
+            } else {
+                echo "<tr><td colspan='9' style='text-align: center; padding: 30px; color: #94a3b8;'>No paid bookings currently in escrow.</td></tr>";
             }
-        } else {
-            echo "<tr><td colspan='9'>No bookings found</td></tr>";
-        }
-        ?>
+            ?>
+        </tbody>
     </table>
 </div>
 
-<?php include('partials/footer.php'); ?>
+<?php 
+include('partials/footer.php'); 
+?>

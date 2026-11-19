@@ -1,26 +1,25 @@
-<?php
-// Include the main configuration file for database connection
-include('partials/main.php');
+<?php 
+include('../config/constant.php');
+include('partials/login-check.php');
 
-// Check if the 'id' parameter is passed via URL
 if (isset($_GET['id'])) {
-    $id = $_GET['id']; // Get the admin ID from the URL
+    $id = intval($_GET['id']);
 
-    // SQL query to delete the admin with the specific ID
-    $sql = "DELETE FROM tbl_admin WHERE id = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param('i', $id); // Bind the ID parameter to the query
+    // Prevent deleting primary super admin (ID: 1)
+    if ($id == 1) {
+        header("Location: manage-user.php?status=error&action=cannot_delete_root");
+        exit();
+    }
 
-    // Execute the query
-    if ($stmt->execute()) {
-        // Redirect to the manage user page with a success message
+    $deleted = db_execute($conn, "DELETE FROM tbl_admin WHERE id = ?", [$id], "i");
+
+    if ($deleted) {
         header("Location: manage-user.php?status=success&action=delete");
     } else {
-        // Redirect to the manage user page with an error message
         header("Location: manage-user.php?status=error&action=delete");
     }
+    exit();
 } else {
-    // If no ID is passed, redirect back to the manage user page
     header('Location: manage-user.php');
     exit();
 }
