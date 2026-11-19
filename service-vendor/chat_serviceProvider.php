@@ -1,26 +1,24 @@
 
 <?php
 include('../config/constant.php');
-$vendor_id = isset($_SESSION['vendor_id']) ? $_SESSION['vendor_id'] : ''; 
+$vendor_id = isset($_SESSION['vendor_id']) ? intval($_SESSION['vendor_id']) : 0; 
 
-if (empty($vendor_id)) {
-    header("Location: login.php");
+if ($vendor_id <= 0) {
+    header("Location: ../signin.php");
     exit();
 }
+
 $query_messages = "SELECT cm.id, cm.customer_id, cm.message, cm.vendor_reply, cm.sent_at, cm.status, c.cus_name 
                    FROM tbl_chat_messages cm
                    JOIN tbl_customer c ON cm.customer_id = c.id
-                   WHERE cm.vendor_id = '$vendor_id'
+                   WHERE cm.vendor_id = ?
                    ORDER BY cm.sent_at DESC";
 
-$result_messages = mysqli_query($conn, $query_messages);
-
-$messages = [];
+$messages = db_fetch_all($conn, $query_messages, [$vendor_id], "i");
 $customers = []; 
 
-if (mysqli_num_rows($result_messages) > 0) {
-    while ($row = mysqli_fetch_assoc($result_messages)) {
-        $messages[] = $row;
+if (!empty($messages)) {
+    foreach ($messages as $row) {
         if (!in_array($row['customer_id'], $customers)) {
             $customers[] = $row['customer_id'];
         }
@@ -28,31 +26,26 @@ if (mysqli_num_rows($result_messages) > 0) {
 }
 
 if (isset($_POST['send_reply'])) {
-    $customer_id = mysqli_real_escape_string($conn, $_POST['customer_id']);
-    $reply_message = mysqli_real_escape_string($conn, $_POST['reply_message']);
+    $customer_id = intval($_POST['customer_id'] ?? 0);
+    $reply_message = trim($_POST['reply_message'] ?? '');
     
     $query_reply = "UPDATE tbl_chat_messages 
-                    SET vendor_reply = '$reply_message', status = 'sent' 
-                    WHERE customer_id = '$customer_id' AND vendor_id = '$vendor_id' AND vendor_reply IS NULL 
+                    SET vendor_reply = ?, status = 'sent' 
+                    WHERE customer_id = ? AND vendor_id = ? AND vendor_reply IS NULL 
                     ORDER BY sent_at DESC LIMIT 1";
     
-    if (mysqli_query($conn, $query_reply)) {
+    if (db_execute($conn, $query_reply, [$reply_message, $customer_id, $vendor_id], "sii")) {
         header("Location: chat_serviceProvider.php?vendor_id=$vendor_id&status=success&action=reply_vendor");
-                exit();
+        exit();
     } else {
         echo "<script>alert('Failed to send reply.');</script>";
     }
 }
 
-
-
-
-// Clear messages for display (without deleting from database)
+// Clear messages for display
 if (isset($_POST['clear_chat'])) {
-    // Update the status of all messages for the service provider to 'cleared' so they won't display
-    $query_clear = "UPDATE tbl_chat_messages SET status = 'cleared' WHERE vendor_id = '$vendor_id' AND status = 'sent'";
-    if (mysqli_query($conn, $query_clear)) {
-        // Redirect to avoid form resubmission
+    $query_clear = "UPDATE tbl_chat_messages SET status = 'cleared' WHERE vendor_id = ? AND status = 'sent'";
+    if (db_execute($conn, $query_clear, [$vendor_id], "i")) {
         header("Location: chat_serviceProvider.php?vendor_id=$vendor_id");
         exit();
     }

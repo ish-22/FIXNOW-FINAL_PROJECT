@@ -1,21 +1,14 @@
 <?php
-// Include the database connection
 include('../config/constant.php');
+header('Content-Type: application/json; charset=utf-8');
 
-if (isset($_POST['district_id'])) {
-    $district_id = $_POST['district_id'];
+$district_id = isset($_GET['district_id']) ? intval($_GET['district_id']) : 0;
 
-    // Fetch towns based on the selected district
-    $town_query = "SELECT * FROM tbl_towns WHERE district_id = '$district_id'";
-    $town_result = mysqli_query($conn, $town_query);
-
-    if (mysqli_num_rows($town_result) > 0) {
-        echo '<option value="">Select Town</option>'; // Default option
-        while ($town = mysqli_fetch_assoc($town_result)) {
-            echo "<option value=\"{$town['id']}\">{$town['town_name']}</option>";
-        }
-    } else {
-        echo '<option value="">No Towns Available</option>'; // No towns found
-    }
+$towns = [];
+if ($district_id > 0) {
+    $towns = db_fetch_all($conn, "SELECT id, town_name, latitude, longitude FROM tbl_towns WHERE district_id = ? ORDER BY town_name ASC", [$district_id], "i");
 }
+
+echo json_encode($towns);
+exit();
 ?>

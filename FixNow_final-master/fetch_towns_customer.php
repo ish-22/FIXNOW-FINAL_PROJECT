@@ -1,17 +1,14 @@
 <?php
 include('./config/constant.php');
+header('Content-Type: application/json; charset=utf-8');
 
-$district_id = isset($_GET['district_id']) ? $_GET['district_id'] : '';
-
-// Fetch towns for the selected district
-$query = "SELECT * FROM tbl_towns WHERE district_id = '$district_id'";
-$result = mysqli_query($conn, $query);
+$district_id = isset($_GET['district_id']) ? intval($_GET['district_id']) : 0;
 
 $towns = [];
-while ($town = mysqli_fetch_assoc($result)) {
-    $towns[] = $town;
+if ($district_id > 0) {
+    $towns = db_fetch_all($conn, "SELECT id, town_name, latitude, longitude FROM tbl_towns WHERE district_id = ? ORDER BY town_name ASC", [$district_id], "i");
 }
 
-// Return towns as JSON
 echo json_encode($towns);
+exit();
 ?>

@@ -8,17 +8,13 @@ include('./config/constant.php');
 
 // Handle customer login
 if (isset($_POST['submit_customer'])) {
-  $email = mysqli_real_escape_string($conn, $_POST['email']);
-  $password = mysqli_real_escape_string($conn, $_POST['password']);
+  $email = trim($_POST['email']);
+  $password = $_POST['password'];
 
-  $encrypted_password = md5($password);
-  $query = "SELECT * FROM tbl_customer WHERE cus_email = '$email' AND cus_password = '$encrypted_password'";
-  $result = mysqli_query($conn, $query);
+  // Secure parameterized query
+  $user = db_fetch_one($conn, "SELECT * FROM tbl_customer WHERE cus_email = ?", [$email], "s");
 
-  if (mysqli_num_rows($result) > 0) {
-
-    $user = mysqli_fetch_assoc($result);
-
+  if ($user && secure_password_verify($password, $user['cus_password'], $conn, 'tbl_customer', 'id', $user['id'], 'cus_password')) {
     $_SESSION['customer_id'] = $user['id'];
     $_SESSION['cus_name'] = $user['cus_name'];
     $_SESSION['cus_email'] = $user['cus_email'];
@@ -27,19 +23,18 @@ if (isset($_POST['submit_customer'])) {
     exit();
   } else {
     header('Location:' . SITEURL . 'signin.php?status=error&action=login_cus');
+    exit();
   }
 }
 
-// Handle vendor login
+// Handle vendor registration fee return
 if (isset($_GET['service_provider_id'])) {
   $service_provider_id = intval($_GET['service_provider_id']);
 
-  // Update registration_fee_paid and payment_status
-  $update_query = "UPDATE tbl_service_providers 
-                   SET registration_fee_paid = 'Yes', payment_status = 'Paid'
-                   WHERE id = $service_provider_id";
+  // Update registration_fee_paid and payment_status securely
+  $update = db_execute($conn, "UPDATE tbl_service_providers SET registration_fee_paid = 'Yes', payment_status = 'Paid' WHERE id = ?", [$service_provider_id], "i");
 
-  if (mysqli_query($conn, $update_query)) {
+  if ($update['success']) {
       $_SESSION['payment_success'] = "Registration payment successful! Please log in.";
   } else {
       $_SESSION['payment_error'] = "Payment received, but failed to update the system.";
@@ -47,19 +42,14 @@ if (isset($_GET['service_provider_id'])) {
 }
 
 if (isset($_POST['submit_vendor'])) {
+  $registration_code = trim($_POST['registration_code']);
+  $email = trim($_POST['email']);
+  $password = $_POST['password'];
 
-  $registration_code = mysqli_real_escape_string($conn, $_POST['registration_code']);
-  $email = mysqli_real_escape_string($conn, $_POST['email']);
-  $password = mysqli_real_escape_string($conn, $_POST['password']);
+  // Secure parameterized query
+  $vendor = db_fetch_one($conn, "SELECT * FROM tbl_service_providers WHERE registration_code = ? AND email = ? AND status = 'Confirmed'", [$registration_code, $email], "ss");
 
-  $encrypted_password = md5($password);
-
-  $query = "SELECT * FROM tbl_service_providers WHERE registration_code = '$registration_code' AND email = '$email' AND password = '$encrypted_password' AND status = 'Confirmed'";
-  $result = mysqli_query($conn, $query);
-
-  if (mysqli_num_rows($result) > 0) {
-    $vendor = mysqli_fetch_assoc($result);
-
+  if ($vendor && secure_password_verify($password, $vendor['password'], $conn, 'tbl_service_providers', 'id', $vendor['id'], 'password')) {
     $_SESSION['vendor_id'] = $vendor['id'];
     $_SESSION['vendor_name'] = $vendor['full_name'];
     $_SESSION['vendor_email'] = $vendor['email'];
@@ -67,8 +57,8 @@ if (isset($_POST['submit_vendor'])) {
     header('Location:' . SITEURL . 'service-vendor/index.php?status=success&action=login_vendor');
     exit();
   } else {
-
     header('Location:' . SITEURL . 'signin.php?status=error&action=login_vendor');
+    exit();
   }
 }
 

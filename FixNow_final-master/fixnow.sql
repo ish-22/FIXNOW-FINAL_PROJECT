@@ -76,6 +76,8 @@ CREATE TABLE `tbl_towns` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `town_name` varchar(100) NOT NULL,
   `district_id` int(11) NOT NULL,
+  `latitude` decimal(10,6) DEFAULT NULL,
+  `longitude` decimal(10,6) DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `district_id` (`district_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -191,11 +193,11 @@ CREATE TABLE `tbl_customer` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table `tbl_customer`
--- Passwords are md5('123456') = 'e10adc3949ba59abbe56e057f20f883e'
+-- Passwords are bcrypt hash of '123456' = '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG'
 INSERT INTO `tbl_customer` (`id`, `cus_name`, `cus_email`, `cus_phone`, `cus_address`, `cus_password`, `cus_image`, `registration_date`, `district_id`, `town_id`, `created_at`) VALUES
-(1, 'Kasun Perera', 'kasun@gmail.com', '0771234567', '45 Galle Road, Colombo 03', 'e10adc3949ba59abbe56e057f20f883e', '16_savi.jpg', NOW(), 1, 2, NOW()),
-(2, 'Lakshi Fernando', 'lakshi@gmail.com', '0719876543', '12 Kandy Road, Kadawatha', 'e10adc3949ba59abbe56e057f20f883e', '16_lakshi.jpg', NOW(), 2, 15, NOW()),
-(3, 'Sewwandi Silva', 'sewwandi@gmail.com', '0754567890', '78 Temple Road, Negombo', 'e10adc3949ba59abbe56e057f20f883e', '16_sewwandi.jpeg', NOW(), 2, 12, NOW());
+(1, 'Kasun Perera', 'kasun@gmail.com', '0771234567', '45 Galle Road, Colombo 03', '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG', '16_savi.jpg', NOW(), 1, 2, NOW()),
+(2, 'Lakshi Fernando', 'lakshi@gmail.com', '0719876543', '12 Kandy Road, Kadawatha', '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG', '16_lakshi.jpg', NOW(), 2, 15, NOW()),
+(3, 'Sewwandi Silva', 'sewwandi@gmail.com', '0754567890', '78 Temple Road, Negombo', '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG', '16_sewwandi.jpeg', NOW(), 2, 12, NOW());
 
 -- --------------------------------------------------------
 -- Table structure for table `tbl_service_providers`
@@ -221,6 +223,8 @@ CREATE TABLE `tbl_service_providers` (
   `vendor_image` varchar(255) DEFAULT NULL,
   `feedback_url` varchar(255) DEFAULT NULL,
   `status` varchar(50) DEFAULT 'Pending',
+  `latitude` decimal(10,6) DEFAULT NULL,
+  `longitude` decimal(10,6) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `district_id` (`district_id`),
@@ -230,12 +234,12 @@ CREATE TABLE `tbl_service_providers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Dumping data for table `tbl_service_providers`
--- Passwords are md5('123456') = 'e10adc3949ba59abbe56e057f20f883e'
+-- Passwords are bcrypt hash of '123456' = '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG'
 INSERT INTO `tbl_service_providers` (`id`, `registration_code`, `full_name`, `email`, `contact_no`, `password`, `district_id`, `town_id`, `category_id`, `servicetype_id`, `experience`, `available_dates_and_times`, `about_you`, `registration_fee_paid`, `payment_status`, `vendor_image`, `feedback_url`, `status`, `created_at`) VALUES
-(1, 'REG1001', 'Sunil Wickramasinghe', 'sunil.electric@gmail.com', '0772345678', 'e10adc3949ba59abbe56e057f20f883e', 1, 8, 1, 1, '8 Years', 'Monday to Saturday, 8:00 AM - 6:00 PM', 'Certified master electrician with over 8 years experience in residential wiring, short-circuit troubleshooting, and appliance repairs.', 'Yes', 'Paid', 'vendor_1850.jpg', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=1', 'Confirmed', NOW()),
-(2, 'REG1002', 'Nimal Jayasuriya', 'nimal.plumber@gmail.com', '0713456789', 'e10adc3949ba59abbe56e057f20f883e', 1, 4, 2, 3, '6 Years', 'All days, 7:00 AM - 8:00 PM', 'Reliable plumbing expert specializing in leak detection, pressure pumps, pipe maintenance, and modern bathroom fittings.', 'Yes', 'Paid', 'plumber man.webp', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=2', 'Confirmed', NOW()),
-(3, 'REG1003', 'Chaminda Bandara', 'chaminda.cleaning@gmail.com', '0764567891', 'e10adc3949ba59abbe56e057f20f883e', 2, 12, 4, 6, '5 Years', 'Weekdays & Weekends, 8:00 AM - 5:00 PM', 'Professional cleaning technician equipped with high-pressure washers, steam cleaners, and eco-friendly cleaning detergents.', 'Yes', 'Paid', 'vendor_2156.jpg', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=3', 'Confirmed', NOW()),
-(4, 'REG1004', 'Ruwan Senanayake', 'ruwan.ac@gmail.com', '0785678912', 'e10adc3949ba59abbe56e057f20f883e', 1, 7, 10, 13, '7 Years', 'Monday to Sunday, 9:00 AM - 7:00 PM', 'HVAC & Inverter AC specialist offering fast diagnostics, chemical wash, coil cleaning, and gas top-up with service warranty.', 'Yes', 'Paid', 'vendor_2789.jpg', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=4', 'Confirmed', NOW());
+(1, 'REG1001', 'Sunil Wickramasinghe', 'sunil.electric@gmail.com', '0772345678', '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG', 1, 8, 1, 1, '8 Years', 'Monday to Saturday, 8:00 AM - 6:00 PM', 'Certified master electrician with over 8 years experience in residential wiring, short-circuit troubleshooting, and appliance repairs.', 'Yes', 'Paid', 'vendor_1850.jpg', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=1', 'Confirmed', NOW()),
+(2, 'REG1002', 'Nimal Jayasuriya', 'nimal.plumber@gmail.com', '0713456789', '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG', 1, 4, 2, 3, '6 Years', 'All days, 7:00 AM - 8:00 PM', 'Reliable plumbing expert specializing in leak detection, pressure pumps, pipe maintenance, and modern bathroom fittings.', 'Yes', 'Paid', 'plumber man.webp', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=2', 'Confirmed', NOW()),
+(3, 'REG1003', 'Chaminda Bandara', 'chaminda.cleaning@gmail.com', '0764567891', '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG', 2, 12, 4, 6, '5 Years', 'Weekdays & Weekends, 8:00 AM - 5:00 PM', 'Professional cleaning technician equipped with high-pressure washers, steam cleaners, and eco-friendly cleaning detergents.', 'Yes', 'Paid', 'vendor_2156.jpg', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=3', 'Confirmed', NOW()),
+(4, 'REG1004', 'Ruwan Senanayake', 'ruwan.ac@gmail.com', '0785678912', '$2y$10$HF5qjSOQib/A2olR6XBP6Ozc8fodKV/c7dc2m3iquCyTJ65CMRftG', 1, 7, 10, 13, '7 Years', 'Monday to Sunday, 9:00 AM - 7:00 PM', 'HVAC & Inverter AC specialist offering fast diagnostics, chemical wash, coil cleaning, and gas top-up with service warranty.', 'Yes', 'Paid', 'vendor_2789.jpg', 'http://localhost/fixnow/service-vendor/feedback.php?service_provider_id=4', 'Confirmed', NOW());
 
 -- --------------------------------------------------------
 -- Table structure for table `tbl_booking`
@@ -252,8 +256,11 @@ CREATE TABLE `tbl_booking` (
   `email` varchar(100) NOT NULL,
   `address` text NOT NULL,
   `booking_date` varchar(50) NOT NULL,
+  `time_slot` varchar(50) DEFAULT '09:00 AM - 11:00 AM',
   `message` text DEFAULT NULL,
   `total_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `platform_fee` decimal(10,2) DEFAULT 0.00,
+  `vendor_payout` decimal(10,2) DEFAULT 0.00,
   `booking_status` varchar(50) DEFAULT 'Pending',
   `task_status` varchar(50) DEFAULT 'Pending',
   `payment_status` varchar(50) DEFAULT 'Pending',
@@ -480,6 +487,8 @@ CREATE TABLE `tbl_invoice` (
   `paid_amount` decimal(10,2) NOT NULL DEFAULT 0.00,
   `message` text DEFAULT NULL,
   `status` varchar(50) DEFAULT 'Pending',
+  `latitude` decimal(10,6) DEFAULT NULL,
+  `longitude` decimal(10,6) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `service_provider_id` (`service_provider_id`),
@@ -493,3 +502,4 @@ INSERT INTO `tbl_invoice` (`id`, `service_provider_id`, `service_type_id`, `mobi
 (3, 3, 6, '0764567891', 'chaminda.cleaning@gmail.com', 'November 2026', 1500.00, 'Monthly payment confirmed. Profile promoted on homepage.', 'paid', NOW() - INTERVAL 5 DAY);
 
 COMMIT;
+
