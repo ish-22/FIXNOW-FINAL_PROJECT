@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "functions": {
+    "api/index.php": {
+      "runtime": "vercel-php@0.8.0",
+      "memory": 1024,
+      "maxDuration": 15
+    }
+  },
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/images/(.*)",
+      "dest": "/images/$1"
+    },
+    {
+      "src": "/js/(.*)",
+      "dest": "/js/$1"
+    },
+    {
+      "src": "/service-vendor/assets/(.*)",
+      "dest": "/service-vendor/assets/$1"
+    },
+    {
+      "src": "/admin/admin_css/(.*)",
+      "dest": "/admin/admin_css/$1"
+    },
+    {
+      "src": "/admin/admin_js/(.*)",
+      "dest": "/admin/admin_js/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.php"
+    }
+  ]
+}
