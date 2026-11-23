@@ -1,144 +1,186 @@
-<?php include './partials/headerwithoutcss.php'; ?>
-<link rel="stylesheet" href="./assets/css/custom.css">
+<?php 
+include_once('../config/constant.php');
+$current_page = 'vendors.php';
+include './partials/header.php'; 
 
-<?php
+// Get filters securely
+$search_name = isset($_GET['search_name']) ? trim($_GET['search_name']) : '';  
+$service_type = isset($_GET['service_type']) ? intval($_GET['service_type']) : 0; 
+$city = isset($_GET['city']) ? intval($_GET['city']) : 0; 
 
+// Fetch filter options
+$service_types_list = db_fetch_all($conn, "SELECT id, service_type FROM tbl_service ORDER BY service_type ASC");
+$towns_list = db_fetch_all($conn, "SELECT id, town_name FROM tbl_towns ORDER BY town_name ASC");
 
-// Get the selected search name from the URL
-$search_name = isset($_GET['search_name']) ? $_GET['search_name'] : '';  // Get search name from URL if available
+// Build query
+$params = [];
+$types = "";
 
-// Get selected service type and city from the URL
-$service_type = isset($_GET['service_type']) ? $_GET['service_type'] : ''; // Get service type from URL if set
-$city = isset($_GET['city']) ? $_GET['city'] : ''; // Get city from URL if set
+$search_query = "SELECT sp.*, s.service_type, s.booking_price, t.town_name 
+                 FROM tbl_service_providers sp 
+                 JOIN tbl_service s ON s.id = sp.servicetype_id
+                 LEFT JOIN tbl_towns t ON t.id = sp.town_id
+                 WHERE sp.status = 'Confirmed'";
 
-// Fetch all service types and cities for the filter options
-$service_types_query = "SELECT * FROM tbl_service"; // Get all service types
-$service_types_result = mysqli_query($conn, $service_types_query);
-
-$towns_query = "SELECT * FROM tbl_towns"; // Get all cities (towns)
-$towns_result = mysqli_query($conn, $towns_query);
-
-// Start building the query for fetching vendors based on search and filters
-$search_query = "SELECT tbl_service_providers.*, tbl_service.service_type, tbl_towns.town_name 
-                 FROM tbl_service_providers 
-                 JOIN tbl_service ON tbl_service.id = tbl_service_providers.servicetype_id
-                 LEFT JOIN tbl_towns ON tbl_towns.id = tbl_service_providers.town_id
-                 WHERE tbl_service_providers.full_name LIKE '%$search_name%' 
-                 AND tbl_service_providers.status = 'Confirmed'"; // Check if the status is 'Confirmed'
-
-
-
-
-// Apply service type filter if set
-if ($service_type != '') {
-    $search_query .= " AND tbl_service_providers.servicetype_id = '$service_type'";
+if ($search_name !== '') {
+    $search_query .= " AND sp.full_name LIKE ?";
+    $params[] = '%' . $search_name . '%';
+    $types .= "s";
 }
 
-// Apply city filter if set
-if ($city != '') {
-    $search_query .= " AND tbl_service_providers.town_id = '$city'";
+if ($service_type > 0) {
+    $search_query .= " AND sp.servicetype_id = ?";
+    $params[] = $service_type;
+    $types .= "i";
 }
 
-// Run the query
-$vendor_result = mysqli_query($conn, $search_query);
+if ($city > 0) {
+    $search_query .= " AND sp.town_id = ?";
+    $params[] = $city;
+    $types .= "i";
+}
+
+$search_query .= " ORDER BY sp.id DESC";
+$vendors = db_fetch_all($conn, $search_query, $params, $types);
+$service_count = count($vendors);
 ?>
 
-<section class="hero section" id="hero">
-  <div class="container">
-    <div class="hero-content">
-      <p class="section-text">&nbsp;</p>
-      <h1 class="h1">All Vendors of Selected Type and City</h1>
-      <p class="section-text"><center>Filter from a <b>Location</b> just for you.</center></p>
+<!-- Hero Section -->
+<div style="background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); padding: 50px 20px 30px 20px; text-align: center; border-bottom: 1px solid #e2e8f0;">
+    <div style="max-width: 800px; margin: 0 auto;">
+        <span style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 16px; background: #e0f2fe; color: #0284c7; padding: 6px 14px; border-radius: 50px; font-size: 13.5px; font-weight: 700;">
+            <i class="fa-solid fa-user-gear"></i> Specialist Directory
+        </span>
+        <h1 style="font-size: 34px; font-weight: 900; color: #0f172a; margin: 0 0 10px 0;">Certified Trade Specialists</h1>
+        <p style="color: #64748b; font-size: 16px; margin: 0 auto; max-width: 600px; line-height: 1.6;">
+            Browse onboarded and accredited specialists across Colombo, Gampaha, Kandy, and islandwide.
+        </p>
+    </div>
+</div>
 
-      <!-- Filter Options -->
-      <div class="filter-options" style="margin-top: 20px; display: flex; gap: 20px; justify-content: center;">
-        <!-- Service Type Dropdown -->
-        <select id="typefilter" class="filter-select" style="padding: 10px; font-size: 1.1rem; border-radius: 5px; border: 1px solid #ccc; width: 200px;">
-          <option value="">Select service Type</option>
-          <?php
-            while ($service_type_row = mysqli_fetch_assoc($service_types_result)) {
-                echo "<option value='{$service_type_row['id']}' " . ($service_type == $service_type_row['id'] ? 'selected' : '') . ">{$service_type_row['service_type']}</option>";
-            }
-          ?>
-        </select>
+<section style="padding: 30px 20px 80px 20px; max-width: 1200px; margin: 0 auto;">
+    
+    <!-- Filter Bar Form -->
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 22px 26px; box-shadow: 0 4px 16px rgba(0,0,0,0.03); margin-bottom: 35px;">
+        <form action="vendors.php" method="GET" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) 130px; gap: 14px; align-items: end;">
+            <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 700; color: #475569; margin-bottom: 6px;">Specialist Name</label>
+                <input type="text" name="search_name" value="<?php echo htmlspecialchars($search_name); ?>" placeholder="Search by name..." 
+                       style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit;" />
+            </div>
 
-        <!-- City Dropdown -->
-        <select id="cityFilter" class="filter-select" style="padding: 10px; font-size: 1.1rem; border-radius: 5px; border: 1px solid #ccc; width: 200px;">
-          <option value="">Select City</option>
-          <?php
-            while ($town_row = mysqli_fetch_assoc($towns_result)) {
-                echo "<option value='{$town_row['id']}' " . ($city == $town_row['id'] ? 'selected' : '') . ">{$town_row['town_name']}</option>";
-            }
-          ?>
-        </select>
-      </div>
+            <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 700; color: #475569; margin-bottom: 6px;">Trade Specialty</label>
+                <select name="service_type" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; background: #ffffff;">
+                    <option value="0">All Specialties</option>
+                    <?php foreach ($service_types_list as $st): ?>
+                        <option value="<?php echo $st['id']; ?>" <?php echo ($service_type == $st['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($st['service_type']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
+            <div>
+                <label style="display: block; font-size: 12.5px; font-weight: 700; color: #475569; margin-bottom: 6px;">Coverage Town</label>
+                <select name="city" style="width: 100%; box-sizing: border-box; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; outline: none; font-family: inherit; background: #ffffff;">
+                    <option value="0">All Towns</option>
+                    <?php foreach ($towns_list as $t): ?>
+                        <option value="<?php echo $t['id']; ?>" <?php echo ($city == $t['id']) ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($t['town_name']); ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
 
+            <div>
+                <button type="submit" style="width: 100%; background: #0284c7; color: #ffffff; border: none; padding: 11px 18px; border-radius: 8px; font-size: 14.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                    <i class="fa-solid fa-filter"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
 
-      <!-- Services Grid Section -->
-      <div class="services-grid">
-        <?php
-        // Display vendor details
-        if (mysqli_num_rows($vendor_result) > 0) {
-            $service_count = mysqli_num_rows($vendor_result); // Get number of service providers
-            while ($vendor = mysqli_fetch_assoc($vendor_result)) {
-                $vendor_name = $vendor['full_name'];
-                $vendor_image = $vendor['vendor_image'] ? $vendor['vendor_image'] : 'default.jpg'; // Handle missing images
-                $service_type = $vendor['service_type'];
-                $contact_number = $vendor['contact_no'];
-                $vendor_id = $vendor['id']; // Correct vendor ID
+    <!-- Results Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+        <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0;">
+            Available Specialists (<?php echo $service_count; ?>)
+        </h2>
+        <?php if ($search_name !== '' || $service_type > 0 || $city > 0): ?>
+            <a href="vendors.php" style="color: #64748b; font-size: 13.5px; text-decoration: none; font-weight: 600;">
+                <i class="fa-solid fa-xmark"></i> Clear Filters
+            </a>
+        <?php endif; ?>
+    </div>
 
-                // Apply the CSS class for small or normal box based on service count
-                $box_class = ($service_count <= 2) ? 'service-box-small' : 'service-box-normal';
+    <!-- Vendors Grid -->
+    <?php if (!empty($vendors)): ?>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px;">
+            <?php foreach ($vendors as $v): 
+                $v_id = $v['id'];
+                $v_img_name = basename($v['vendor_image'] ?? '');
+                $v_img = (!empty($v['vendor_image']) && file_exists('../images/vendor_images/' . $v_img_name))
+                    ? '../images/vendor_images/' . htmlspecialchars($v_img_name)
+                    : '../images/vendor_images/default.jpg';
+                
+                // Fetch rating
+                $r_data = db_fetch_one($conn, "SELECT AVG(rating) AS avg_r, COUNT(*) AS cnt FROM tbl_feedback WHERE vendor_id = ?", [$v_id], "i");
+                $avg_r = ($r_data && $r_data['avg_r']) ? round(floatval($r_data['avg_r']), 1) : 5.0;
+                $review_cnt = ($r_data && $r_data['cnt']) ? intval($r_data['cnt']) : 0;
+            ?>
+                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 18px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02); display: flex; flex-direction: column; transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.boxShadow='0 10px 25px rgba(2,132,199,0.08)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.02)';">
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 16px;">
+                        <img src="<?php echo $v_img; ?>" alt="<?php echo htmlspecialchars($v['full_name']); ?>" 
+                             style="width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2.5px solid #0284c7;" />
+                        <div>
+                            <span style="font-size: 11.5px; font-weight: 800; color: #0284c7; background: #e0f2fe; padding: 2px 8px; border-radius: 4px; text-transform: uppercase;">
+                                <?php echo htmlspecialchars($v['service_type']); ?>
+                            </span>
+                            <h3 style="font-size: 17px; font-weight: 800; color: #0f172a; margin: 4px 0 2px 0;">
+                                <?php echo htmlspecialchars($v['full_name']); ?>
+                            </h3>
+                            <div style="display: flex; align-items: center; gap: 4px; font-size: 12px; color: #f59e0b;">
+                                <i class="fa-solid fa-star"></i>
+                                <strong style="color: #0f172a;"><?php echo $avg_r; ?></strong>
+                                <span style="color: #94a3b8;">(<?php echo $review_cnt; ?>)</span>
+                            </div>
+                        </div>
+                    </div>
 
-                echo "
-                <div class='service-box {$box_class}'>
-                    <img src='../images/vendor_images/{$vendor_image}' alt='{$vendor_name}' class='service-image' />
-                    <div class='service-details'>
-                    <span style='display: inline-block; background-color: #28a745; color: white; padding: 2px 2px; font-size: 12px; font-weight: bold; border-radius: 5px; margin-bottom: 5px;'>✔ Verified</span>
-                        <h3 class='service-title'>{$vendor_name}</h3>
-                        <p class='service-description'>Service Type: {$service_type}</p>
-                        <p class='service-description'>Contact: {$contact_number}</p>
-                        <!-- Correctly passing the vendor_id to the next page -->
-            <a href='vendors-details.php?vendor_id={$vendor_id}' class='btn btn-primary' id='find-job-btn' style='padding: 10px 10px; text-decoration: none; font-size: 2.5rem; border-radius: 5px; display: block; margin: 0 auto; width: 200px;'>See More</a>
+                    <div style="font-size: 13.5px; color: #64748b; line-height: 1.6; margin-bottom: 18px; display: flex; flex-direction: column; gap: 6px;">
+                        <div>
+                            <i class="fa-solid fa-location-dot" style="color: #0284c7; width: 16px;"></i>
+                            <span><?php echo htmlspecialchars($v['town_name'] ?? 'Sri Lanka'); ?></span>
+                        </div>
+                        <div>
+                            <i class="fa-solid fa-briefcase" style="color: #0284c7; width: 16px;"></i>
+                            <span>Experience: <?php echo htmlspecialchars($v['experience'] ?? 'Experienced'); ?></span>
+                        </div>
+                        <div>
+                            <i class="fa-solid fa-tag" style="color: #0284c7; width: 16px;"></i>
+                            <span>Rates: From LKR <?php echo number_format(floatval($v['booking_price']), 2); ?></span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: auto; padding-top: 14px; border-top: 1px dashed #e2e8f0;">
+                        <a href="vendors-details.php?vendor_id=<?php echo $v_id; ?>" style="display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 10px; font-size: 13.5px; font-weight: 700; color: #0284c7; border: 1.5px solid #0284c7; border-radius: 50px; text-decoration: none; box-sizing: border-box;">
+                            View Profile &amp; Reviews <i class="fa-solid fa-arrow-right fa-xs"></i>
+                        </a>
                     </div>
                 </div>
-                ";
-            }
-        } else {
-            echo "<p>No vendors found for your search. Please select another filter.</p>";
-        }
-        ?>
-      </div>
+            <?php endforeach; ?>
+        </div>
+    <?php else: ?>
+        <div style="text-align: center; padding: 70px 20px; background: #ffffff; border-radius: 18px; border: 1px dashed #cbd5e1;">
+            <i class="fa-solid fa-user-slash fa-3x" style="color: #94a3b8; margin-bottom: 16px;"></i>
+            <h3 style="font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">No Specialists Found</h3>
+            <p style="color: #64748b; margin-bottom: 20px;">Try adjusting your search criteria or clearing filters.</p>
+            <a href="vendors.php" style="background: #0284c7; color: #ffffff; padding: 10px 24px; border-radius: 50px; text-decoration: none; font-weight: 700;">Reset Filters</a>
+        </div>
+    <?php endif; ?>
 
-
-    </div>
-  </div>
 </section>
 
-<?php include './partials/footer.php'; ?>
-
-<script>
-// JavaScript to filter by service type and city
-document.getElementById('typefilter').addEventListener('change', function() {
-    const serviceType = this.value;
-    const city = document.getElementById('cityFilter').value;
-    if (serviceType === '' && city === '') {
-        // Show all vendors if no filters are selected
-        window.location.href = 'vendors.php';
-    } else {
-        window.location.href = `vendors.php?service_type=${serviceType}&city=${city}`;
-    }
-});
-
-document.getElementById('cityFilter').addEventListener('change', function() {
-    const serviceType = document.getElementById('typefilter').value;
-    const city = this.value;
-    if (serviceType === '' && city === '') {
-        // Show all vendors if no filters are selected
-        window.location.href = 'vendors.php';
-    } else {
-        window.location.href = `vendors.php?service_type=${serviceType}&city=${city}`;
-    }
-});
-</script>
+<?php 
+include './partials/footer.php'; 
+?>
