@@ -63,3 +63,4 @@ if ($target_sub_index && strpos($target_sub_index, $root_dir) === 0 && is_file($
 http_response_code(404);
 echo "<!DOCTYPE html><html><head><meta charset='UTF-8'><title>404 Not Found | FIXNOW</title><style>body{font-family:sans-serif;background:#f8fafc;color:#0f172a;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;}.box{background:#fff;padding:40px;border-radius:16px;border:1px solid #e2e8f0;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.05);max-width:480px;}a{display:inline-block;margin-top:20px;background:#0284c7;color:#fff;text-decoration:none;padding:10px 24px;border-radius:50px;font-weight:700;}</style></head><body><div class='box'><h1>404</h1><p>The requested page was not found on FIXNOW.</p><a href='/'>Return to Home</a></div></body></html>";
 exit();
+
