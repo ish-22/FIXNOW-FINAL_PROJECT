@@ -42,7 +42,17 @@ if (!defined('LOCALHOST')) {
 // Establish database connection if not already connected
 if (!isset($conn) || !($conn instanceof mysqli)) {
     try {
-        $conn = mysqli_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306);
+        if (LOCALHOST === 'localhost' || LOCALHOST === '127.0.0.1') {
+            $conn = mysqli_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306);
+        } else {
+            // Cloud MySQL / TiDB requires SSL connection
+            $conn = mysqli_init();
+            if (defined('MYSQLI_OPT_SSL_VERIFY_SERVER_CERT')) {
+                $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+            }
+            $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
+            $conn->real_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306, NULL, MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT);
+        }
     } catch (Exception $e) {
         $conn = false;
     }
