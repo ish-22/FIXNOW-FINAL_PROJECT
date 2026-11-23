@@ -1,269 +1,209 @@
 <?php
+include_once('../config/constant.php');
 
-include('../config/constant.php');
-
-// Check if the user is logged in
 if (!isset($_SESSION['vendor_id'])) {
-    echo "You need to log in to view this page.";
+    header("Location: ../signin.php");
     exit();
 }
 
-// Get the logged-in vendor ID from the session
-$vendor_id = $_SESSION['vendor_id'];
+$vendor_id = intval($_SESSION['vendor_id']);
 
 // Fetch vendor details based on vendor_id
-$vendor_query = "SELECT 
-                    sp.full_name AS vendor_name,
-                    sp.email,
-                    sp.contact_no AS contact_number,
-                    sp.experience,
-                    sp.about_you,
-                    sp.available_dates_and_times AS available_times,
-                    sp.vendor_image,
-                    s.service_type,
-                    t.town_name,
-                    s.booking_price
-                FROM tbl_service_providers sp
-                LEFT JOIN tbl_service s ON sp.servicetype_id = s.id
-                LEFT JOIN tbl_towns t ON sp.town_id = t.id
-                WHERE sp.id = '$vendor_id' AND sp.status = 'Confirmed'";
+$vendor = db_fetch_one(
+    $conn,
+    "SELECT 
+        sp.full_name AS vendor_name,
+        sp.email,
+        sp.contact_no AS contact_number,
+        sp.experience,
+        sp.about_you,
+        sp.available_dates_and_times AS available_times,
+        sp.vendor_image,
+        s.service_type,
+        t.town_name,
+        s.booking_price,
+        sp.registration_code,
+        sp.status
+    FROM tbl_service_providers sp
+    LEFT JOIN tbl_service s ON sp.servicetype_id = s.id
+    LEFT JOIN tbl_towns t ON sp.town_id = t.id
+    WHERE sp.id = ?",
+    [$vendor_id],
+    "i"
+);
 
-$vendor_result = mysqli_query($conn, $vendor_query);
-
-// Check if the vendor exists
-if ($vendor_result && mysqli_num_rows($vendor_result) == 1) {
-    $vendor = mysqli_fetch_assoc($vendor_result);
-} else {
-    echo "Vendor not found or not confirmed.";
+if (!$vendor) {
+    header("Location: ../signin.php");
     exit();
 }
 
-
 // Fetch average rating from tbl_feedback
-$sql_rank = "SELECT AVG(rating) AS average_rating FROM tbl_feedback WHERE vendor_id = '$vendor_id'";
-$result_rank = mysqli_query($conn, $sql_rank);
-$rank = mysqli_fetch_assoc($result_rank);
-$average_rating = $rank['average_rating'] ? round($rank['average_rating'], 1) : 0; // Default to 0 if no reviews
+$rank_data = db_fetch_one($conn, "SELECT AVG(rating) AS average_rating, COUNT(*) AS review_count FROM tbl_feedback WHERE vendor_id = ?", [$vendor_id], "i");
+$average_rating = ($rank_data && $rank_data['average_rating']) ? round(floatval($rank_data['average_rating']), 1) : 0.0;
+$review_count = ($rank_data && $rank_data['review_count']) ? intval($rank_data['review_count']) : 0;
 
 // Fetch count of completed tasks from tbl_booking
-$sql_completed_tasks = "SELECT COUNT(*) AS completed_tasks FROM tbl_booking WHERE service_provider_id = '$vendor_id' AND task_status = 'Completed'";
-$result_completed_tasks = mysqli_query($conn, $sql_completed_tasks);
-$completed_data = mysqli_fetch_assoc($result_completed_tasks);
-$completed_tasks = $completed_data['completed_tasks'];
+$tasks_data = db_fetch_one($conn, "SELECT COUNT(*) AS completed_tasks FROM tbl_booking WHERE service_provider_id = ? AND task_status = 'Completed'", [$vendor_id], "i");
+$completed_tasks = $tasks_data ? intval($tasks_data['completed_tasks']) : 0;
 
-// Add 1.0 for each completed task
+// Overall ranking calculation
 $overall_ranking = round($average_rating + $completed_tasks, 1);
 
-// No more capping at 5
+$current_page = 'profile.php';
+include('./partials/header.php');
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vendor Profile</title>
-    <link rel="shortcut icon" href="./assets/images/fixnow-logo-icon.png" type="image/svg+xml">
-    <link rel="stylesheet" href="./assets/css/vendordetails.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
-        integrity="sha384-EOeXteC1mW/V8wnxF60vsqW3UQuv0YhUOZr6bFz9XIlT0L0lLhxFLM6W8fqylS3A" crossorigin="anonymous">
-    <link rel="stylesheet" href="fonts/remixicon.css">
-    <link rel="stylesheet" href="fonts/remixicon.css">
-    <script src="../js/script.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon/fonts/remixicon.css">
-    <style>
-    /* Ranking Section */
-    /* Ranking Section */
-    .rank {
-        background: linear-gradient(to right, #007bff, #0056b3);
-        /* Blue gradient */
-        color: #fff;
-        text-align: center;
-        padding: 10px;
-        border-radius: 10px;
-        box-shadow: 0px 3px 10px rgba(0, 0, 0, 0.2);
-        margin: 0;
-        font-size: 18px;
-        font-weight: bold;
-        transition: transform 0.3s ease-in-out;
-        width: 280px;
-        /* Reduced size */
-        display: inline-block;
-    }
-
-    .rank:hover {
-        transform: scale(1.03);
-    }
-
-    .rank h1 {
-        font-size: 20px;
-        margin-bottom: 5px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .rank span {
-        font-size: 24px;
-        margin-top: 20px;
-        font-weight: bold;
-        background: #fff;
-        color: #0056b3;
-        padding: 8px 15px;
-        border-radius: 8px;
-        display: inline-block;
-        box-shadow: 2px 3px 8px rgba(0, 0, 0, 0.2);
-    }
-
-
-
-    /* Star Rating */
-    .rating {
-        margin-top: 10px;
-        margin-left: 35px;
-
-    }
-
-    .rating i {
-        font-size: 22px;
-
-        color: #fff;
-        /* White stars */
-        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
-        margin: 2px;
-    }
-    </style>
-</head>
-
-<body>
-    <div class="container">
-        <header>
-            <div class="brandLogo">
-                <figure><img src="./assets/images/fixnow-logo-icon.png" alt="logo" width="40px" height="40px"></figure>
-                <span>FIXNOW</span>
-            </div>
-        </header>
-
-        <!-- Back Button -->
-        <button class="back-button" onclick="window.location.href='index.php'">Back</button>
-
-        <!-- Vendor Profile Section -->
-        <section class="userProfile card">
-            <div class="profile">
-                <figure><img src="../images/vendor_images/<?php echo htmlspecialchars($vendor['vendor_image']); ?>"
-                        alt="profile" width="250px" height="250px"></figure>
-            </div>
-        </section>
-
-        <section class="work_skills card">
-            <div class="work">
-                <h1 class="heading">Work</h1>
-                <div class="vendor-details">
-                    <h1><?php echo htmlspecialchars($vendor['vendor_name']); ?></h1>
-                    <br>
-                    <span>Certified (<?php echo htmlspecialchars($vendor['service_type']); ?>)</span>
-                    <p><strong><?php echo htmlspecialchars($vendor['service_type']); ?></strong> Services in
-                        <strong></strong>
-                        <><?php echo htmlspecialchars($vendor['town_name']); ?></strong>
-                    </p>
-                    <br>
-                    <p><strong>experience:</strong> <?php echo htmlspecialchars($vendor['experience']); ?></p>
-                    <br>
-                    <p><strong>About:</strong> <?php echo htmlspecialchars($vendor['about_you']); ?></p>
-                </div>
-            </div>
-        </section>
-
-
-
-
-        <section class="userDetails card">
-            <div class="userName">
-                <h1 class="name"><?php echo htmlspecialchars($vendor['vendor_name']); ?></h1>
-                <p>Certified (<?php echo htmlspecialchars($vendor['service_type']); ?>)</p>
-            </div>
-
-            <div class="rank">
-                <h1>Overall Ranking</h1>
-                <span><?php echo $overall_ranking; ?></span>
-                <div class="rating">
-                    <?php
-                    // Ensure a max of 5 stars
-                    $stars_to_display = min(5, ceil($overall_ranking));
-
-                    for ($i = 1; $i <= $stars_to_display; $i++) {
-                        echo '<i class="ri-star-fill"></i>';
-                    }
-                    ?>
-                </div>
-            </div>
-
-            <div class="btns">
-                <ul>
-                    <!-- Check if the customer is logged in -->
-                    <!-- <li class="sendMsg">
-                        <a href="Add_feedback_url.php" class="btn btn-primary">Add Feedback URL</a>
-                    </li> -->
-                    <li class="sendMsg">
-                        <a href="update_profile.php" class="btn btn-secondary">Update Profile</a>
-                    </li>
-
-
-
-
-
-                </ul>
-            </div>
-        </section>
-
-        <section class="timeline_about card">
-            <div class="basic_info">
-                <h1 class="heading">Contact Information</h1>
-                <ul>
-                    <li class="phone">
-                        <h1 class="label">Phone:</h1>
-                        <span class="info"><?php echo htmlspecialchars($vendor['contact_number']); ?></span>
-                    </li>
-                    <li class="address">
-                        <h1 class="label">Town:</h1>
-                        <span class="info"><?php echo htmlspecialchars($vendor['town_name']); ?></span>
-                    </li>
-                    <li class="email">
-                        <h1 class="label">E-mail:</h1>
-                        <span class="info"><?php echo htmlspecialchars($vendor['email']); ?></span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="basic_info">
-                <h1 class="heading">Basic Information</h1>
-                <ul>
-                    <li class="experience">
-                        <h1 class="label">Experience:</h1>
-                        <span class="info"><?php echo htmlspecialchars($vendor['experience']); ?></span>
-                    </li>
-
-                    <h1 class="label">Booking Price:</h1>
-                    <?php
-                    $display_price = $vendor['booking_price'];
-                    if ($overall_ranking >= 5) {
-                        $vendor['booking_price'] += 200;
-                    }
-                    ?>
-                    <span class="info"><?php echo htmlspecialchars($vendor['booking_price']); ?> (Materials and
-                        additional costs extra)</span>
-                    </li>
-
-
-                    <li class="availability">
-                        <h1 class="label">Available Times:</h1>
-                        <span class="info"><?php echo htmlspecialchars($vendor['available_times']); ?></span>
-                    </li>
-                </ul>
-            </div>
-        </section>
+<!-- Hero Header Section -->
+<div style="background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); padding: 50px 0 30px 0; border-bottom: 1px solid #e2e8f0;">
+    <div style="max-width: 1050px; margin: 0 auto; padding: 0 20px;">
+        <span style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; background: #e0f2fe; color: #0284c7; padding: 6px 14px; border-radius: 50px; font-size: 13.5px; font-weight: 700;">
+            <i class="fa-solid fa-id-badge"></i> Specialist Console
+        </span>
+        <h1 style="font-size: 32px; font-weight: 900; color: #0f172a; margin: 0 0 8px 0;">
+            Partner Account &amp; Profile
+        </h1>
+        <p style="color: #64748b; font-size: 15.5px; margin: 0; max-width: 650px;">
+            Manage your service provider credentials, service area, dispatch availability, and monitor client performance ratings.
+        </p>
     </div>
-</body>
+</div>
 
-</html>
+<!-- Main Profile Section -->
+<section style="padding: 40px 20px 80px 20px; max-width: 1050px; margin: 0 auto;">
+    
+    <div style="display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start;">
+        
+        <!-- Left: Detailed Profile Card -->
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+            
+            <!-- Top Bio Bar -->
+            <div style="display: flex; align-items: center; gap: 24px; flex-wrap: wrap; border-bottom: 1px solid #e2e8f0; padding-bottom: 26px; margin-bottom: 28px;">
+                <?php 
+                    $v_img = '../images/vendor_images/' . ($vendor['vendor_image'] ?? '');
+                    $avatar_src = (!empty($vendor['vendor_image']) && file_exists($v_img)) ? $v_img : '../images/vendor_images/default.jpg';
+                ?>
+                <img src="<?php echo htmlspecialchars($avatar_src); ?>" alt="<?php echo htmlspecialchars($vendor['vendor_name']); ?>" 
+                     style="width: 96px; height: 96px; border-radius: 50%; object-fit: cover; border: 3px solid #0284c7; box-shadow: 0 4px 14px rgba(2,132,199,0.2);" />
+
+                <div>
+                    <span style="background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; font-size: 12px; font-weight: 800; padding: 3px 10px; border-radius: 50px; text-transform: uppercase;">
+                        <i class="fa-solid fa-circle-check"></i> <?php echo htmlspecialchars($vendor['status']); ?> Partner
+                    </span>
+                    <h2 style="font-size: 24px; font-weight: 900; color: #0f172a; margin: 6px 0 4px 0;">
+                        <?php echo htmlspecialchars($vendor['vendor_name']); ?>
+                    </h2>
+                    <p style="color: #0284c7; font-size: 14.5px; font-weight: 700; margin: 0 0 6px 0;">
+                        <?php echo htmlspecialchars($vendor['service_type'] ?? 'General Specialist'); ?>
+                    </p>
+                    <p style="color: #64748b; font-size: 13px; margin: 0;">
+                        Registration ID: <strong><?php echo htmlspecialchars($vendor['registration_code'] ?? ('REG' . (1000 + $vendor_id))); ?></strong>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Profile Info Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 18px; margin-bottom: 28px;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                    <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Primary Email</span>
+                    <strong style="color: #0f172a; font-size: 14px;"><?php echo htmlspecialchars($vendor['email']); ?></strong>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                    <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Contact Phone</span>
+                    <strong style="color: #0f172a; font-size: 14px;"><?php echo htmlspecialchars($vendor['contact_number']); ?></strong>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                    <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Primary Town</span>
+                    <strong style="color: #0f172a; font-size: 14px;"><?php echo htmlspecialchars($vendor['town_name'] ?? 'Sri Lanka'); ?></strong>
+                </div>
+
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px;">
+                    <span style="font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block; margin-bottom: 4px;">Industry Experience</span>
+                    <strong style="color: #0f172a; font-size: 14px;"><?php echo htmlspecialchars($vendor['experience'] ?? 'Experienced'); ?></strong>
+                </div>
+            </div>
+
+            <!-- Availability & About -->
+            <div style="margin-bottom: 24px;">
+                <h4 style="font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                    <i class="fa-regular fa-clock" style="color: #0284c7; margin-right: 6px;"></i> Operating &amp; Arrival Hours
+                </h4>
+                <p style="font-size: 14px; color: #475569; margin: 0 0 16px 0;">
+                    <?php echo htmlspecialchars($vendor['available_times'] ?? 'Standard Business Hours'); ?>
+                </p>
+
+                <h4 style="font-size: 15px; font-weight: 800; color: #0f172a; margin-bottom: 6px;">
+                    <i class="fa-solid fa-align-left" style="color: #0284c7; margin-right: 6px;"></i> Professional Summary
+                </h4>
+                <p style="font-size: 14px; color: #475569; line-height: 1.6; margin: 0;">
+                    <?php echo htmlspecialchars($vendor['about_you'] ?? 'Accredited technical service provider on the FixNow platform.'); ?>
+                </p>
+            </div>
+
+            <!-- Actions Bar -->
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; border-top: 1px solid #e2e8f0; padding-top: 22px;">
+                <a href="update_profile.php" style="background: #0284c7; color: #ffffff; text-decoration: none; padding: 11px 24px; border-radius: 50px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-pen-to-square"></i> Edit Profile
+                </a>
+                <a href="vendors-details.php?vendor_id=<?php echo $vendor_id; ?>" style="background: #ffffff; color: #0284c7; border: 1.5px solid #0284c7; text-decoration: none; padding: 10px 22px; border-radius: 50px; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-eye"></i> View Public Profile
+                </a>
+            </div>
+
+        </div>
+
+        <!-- Right: Ranking & Metrics Column -->
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            
+            <!-- Overall Ranking Card -->
+            <div style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); border-radius: 20px; padding: 28px; color: #ffffff; text-align: center; box-shadow: 0 8px 24px rgba(2,132,199,0.25);">
+                <span style="font-size: 12.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">
+                    Platform Ranking Score
+                </span>
+                <div style="font-size: 48px; font-weight: 900; margin: 10px 0; line-height: 1;">
+                    <?php echo $overall_ranking; ?>
+                </div>
+                <p style="font-size: 13px; opacity: 0.9; margin: 0 0 16px 0; line-height: 1.5;">
+                    Calibrated based on client feedback and confirmed job completions.
+                </p>
+                <div style="display: flex; justify-content: center; gap: 16px; font-size: 13px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 14px;">
+                    <div>
+                        <strong style="display: block; font-size: 16px;"><?php echo $average_rating; ?> ★</strong>
+                        <span style="opacity: 0.8; font-size: 11.5px;">Avg Rating</span>
+                    </div>
+                    <div>
+                        <strong style="display: block; font-size: 16px;"><?php echo $completed_tasks; ?></strong>
+                        <span style="opacity: 0.8; font-size: 11.5px;">Completed</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Management Card -->
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 16px rgba(0,0,0,0.02);">
+                <h3 style="font-size: 16px; font-weight: 800; color: #0f172a; margin-bottom: 14px;">Quick Shortcuts</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <a href="customer-bookings.php" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8fafc; border-radius: 10px; text-decoration: none; color: #334155; font-size: 13.5px; font-weight: 600;">
+                        <span><i class="fa-solid fa-list-check" style="color: #0284c7; margin-right: 8px;"></i> Active Work Orders</span>
+                        <i class="fa-solid fa-chevron-right fa-xs" style="color: #94a3b8;"></i>
+                    </a>
+                    <a href="feedback.php?vendor_id=<?php echo $vendor_id; ?>" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8fafc; border-radius: 10px; text-decoration: none; color: #334155; font-size: 13.5px; font-weight: 600;">
+                        <span><i class="fa-solid fa-star" style="color: #f59e0b; margin-right: 8px;"></i> Customer Reviews (<?php echo $review_count; ?>)</span>
+                        <i class="fa-solid fa-chevron-right fa-xs" style="color: #94a3b8;"></i>
+                    </a>
+                    <a href="invoice.php" style="display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: #f8fafc; border-radius: 10px; text-decoration: none; color: #334155; font-size: 13.5px; font-weight: 600;">
+                        <span><i class="fa-solid fa-file-invoice-dollar" style="color: #10b981; margin-right: 8px;"></i> Membership &amp; Invoices</span>
+                        <i class="fa-solid fa-chevron-right fa-xs" style="color: #94a3b8;"></i>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+
+<?php
+include('./partials/footer.php');
+?>

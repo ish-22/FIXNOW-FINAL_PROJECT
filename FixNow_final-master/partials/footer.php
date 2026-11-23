@@ -5,8 +5,9 @@
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 40px; margin-bottom: 50px;">
             <!-- Brand Info Column -->
             <div>
-                <a href="index.php" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; margin-bottom: 16px;">
-                    <img src="./assets/images/fixnow-logo.png" alt="FIXNOW" style="height: 38px; width: auto; filter: brightness(0) invert(1);" />
+                <a href="index.php" style="display: inline-flex; align-items: center; gap: 10px; text-decoration: none; margin-bottom: 16px;">
+                    <img src="./assets/images/fixnow-logo-icon.png" alt="FIXNOW" style="height: 36px; width: auto;" />
+                    <span style="font-size: 26px; font-weight: 900; color: #ffffff; letter-spacing: -0.5px; font-family: 'League Spartan', sans-serif;"><span style="color: #38bdf8;">FIX</span>NOW</span>
                 </a>
                 <p style="font-size: 14.5px; line-height: 1.6; color: #94a3b8; margin-bottom: 20px;">
                     Sri Lanka's leading digital marketplace connecting homeowners with verified, high-quality technical specialists and service professionals.

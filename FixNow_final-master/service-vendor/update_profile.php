@@ -1,306 +1,269 @@
 <?php
+include_once('../config/constant.php');
 
-include('../config/constant.php');
-
-
-
-// Check if the user is logged in
 if (!isset($_SESSION['vendor_id'])) {
-    echo "You need to log in to view this page.";
+    header("Location: ../signin.php");
     exit();
 }
 
-// Get the logged-in vendor ID from the session
-$vendor_id = $_SESSION['vendor_id'];
+$vendor_id = intval($_SESSION['vendor_id']);
+$error_msg = '';
 
-// Fetch vendor details from the database
-$sql_vendor = "SELECT 
-                sp.full_name AS vendor_name,
-                sp.email,
-                sp.contact_no AS contact_number,
-                sp.experience,
-                sp.available_dates_and_times AS available_times,
-                sp.vendor_image,
-                sp.about_you,
-                sp.district_id,
-                sp.town_id,
-                d.district_name,
-                t.town_name
-            FROM tbl_service_providers sp
-            LEFT JOIN tbl_districts d ON sp.district_id = d.id
-            LEFT JOIN tbl_towns t ON sp.town_id = t.id
-            WHERE sp.id = '$vendor_id'";
+// Handle Form Submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_update'])) {
+    $name = trim($_POST['name'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $district_id = intval($_POST['district_id'] ?? 0);
+    $town_id = intval($_POST['town_id'] ?? 0);
+    $experience = trim($_POST['experience'] ?? '');
+    $about_you = trim($_POST['about_you'] ?? '');
+    $available_times = trim($_POST['available_times'] ?? '');
 
-$result_vendor = mysqli_query($conn, $sql_vendor);
+    if (!empty($name) && !empty($email) && !empty($phone)) {
+        // Handle Profile Image Upload
+        $profile_picture = null;
+        if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+            $allowed_exts = ['jpg', 'jpeg', 'png', 'webp'];
+            $file_ext = strtolower(pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION));
+            if (in_array($file_ext, $allowed_exts)) {
+                $profile_picture = 'vendor_' . $vendor_id . '_' . time() . '.' . $file_ext;
+                $target_file = __DIR__ . '/../images/vendor_images/' . $profile_picture;
+                move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file);
+            }
+        }
 
-if ($result_vendor && mysqli_num_rows($result_vendor) == 1) {
-    $vendor = mysqli_fetch_assoc($result_vendor);
-} else {
-    echo "Vendor not found.";
-    exit();
-}
+        if ($profile_picture) {
+            $sql_update = "UPDATE tbl_service_providers SET 
+                            full_name = ?, email = ?, contact_no = ?, district_id = ?, town_id = ?, 
+                            experience = ?, about_you = ?, available_dates_and_times = ?, vendor_image = ? 
+                           WHERE id = ?";
+            $updated = db_execute($conn, $sql_update, [$name, $email, $phone, $district_id, $town_id, $experience, $about_you, $available_times, $profile_picture, $vendor_id], "sssiissssi");
+        } else {
+            $sql_update = "UPDATE tbl_service_providers SET 
+                            full_name = ?, email = ?, contact_no = ?, district_id = ?, town_id = ?, 
+                            experience = ?, about_you = ?, available_dates_and_times = ? 
+                           WHERE id = ?";
+            $updated = db_execute($conn, $sql_update, [$name, $email, $phone, $district_id, $town_id, $experience, $about_you, $available_times, $vendor_id], "sssiisssi");
+        }
 
-// Handle form submission
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
-    $phone = mysqli_real_escape_string($conn, $_POST['phone']);
-    $district_id = mysqli_real_escape_string($conn, $_POST['district_id']);
-    $town_id = mysqli_real_escape_string($conn, $_POST['town_id']);
-    $experience = mysqli_real_escape_string($conn, $_POST['experience']);
-    $about_you = mysqli_real_escape_string($conn, $_POST['about_you']);
-
-    // Handle profile picture upload
-    $profile_picture = $vendor['vendor_image'];
-    if (isset($_FILES['profile_picture']['name']) && $_FILES['profile_picture']['name'] !== '') {
-        $target_dir = "../images/vendor_images/";
-        $profile_picture = basename($_FILES['profile_picture']['name']);
-        $target_file = $target_dir . $profile_picture;
-        move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file);
-    }
-
-    // Update vendor details in the database
-    $sql_update = "UPDATE tbl_service_providers SET 
-                    full_name = '$name',
-                    email = '$email',
-                    contact_no = '$phone',
-                    district_id = '$district_id',
-                    town_id = '$town_id',
-                    experience = '$experience',
-                    about_you = '$about_you',
-                    vendor_image = '$profile_picture'
-                  WHERE id = '$vendor_id'";
-
-    if (mysqli_query($conn, $sql_update)) {
-        echo "<script>alert('profile upadate successful!'); window.location.href = 'profile.php';</script>";
+        if ($updated) {
+            header("Location: profile.php?status=success&action=profile_updated");
+            exit();
+        } else {
+            $error_msg = "Database error saving changes. Please ensure email is unique.";
+        }
     } else {
-        echo "<p>Error updating profile: " . mysqli_error($conn) . "</p>";
+        $error_msg = "Please fill in all required fields.";
     }
 }
+
+// Fetch vendor details securely
+$vendor = db_fetch_one($conn, "SELECT * FROM tbl_service_providers WHERE id = ?", [$vendor_id], "i");
+if (!$vendor) {
+    header("Location: ../signin.php");
+    exit();
+}
+
+// Fetch districts
+$districts = db_fetch_all($conn, "SELECT id, district_name FROM tbl_districts ORDER BY district_name ASC");
+
+// Fetch towns for current district
+$current_district_id = intval($vendor['district_id'] ?? 0);
+$towns = [];
+if ($current_district_id > 0) {
+    $towns = db_fetch_all($conn, "SELECT id, town_name FROM tbl_towns WHERE district_id = ? ORDER BY town_name ASC", [$current_district_id], "i");
+}
+
+$current_page = 'profile.php';
+include('./partials/header.php');
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Vendor Profile</title>
-    <style>
-        /* General Styles */
-        body {
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+<!-- Hero Header Section -->
+<div style="background: linear-gradient(180deg, #f0f9ff 0%, #ffffff 100%); padding: 50px 0 30px 0; border-bottom: 1px solid #e2e8f0; text-align: center;">
+    <div style="max-width: 800px; margin: 0 auto; padding: 0 20px;">
+        <span style="display: inline-flex; align-items: center; gap: 8px; margin-bottom: 14px; background: #e0f2fe; color: #0284c7; padding: 6px 14px; border-radius: 50px; font-size: 13.5px; font-weight: 700;">
+            <i class="fa-solid fa-user-pen"></i> Specialist Console
+        </span>
+        <h1 style="font-size: 32px; font-weight: 900; color: #0f172a; margin: 0 0 8px 0;">
+            Edit Specialist Profile
+        </h1>
+        <p style="color: #64748b; font-size: 15.5px; margin: 0 auto; max-width: 600px;">
+            Keep your contact numbers, primary service town, and availability updated to maintain reliable job dispatching.
+        </p>
+    </div>
+</div>
 
-        .profile-edit-container {
-            max-width: 600px;
-            width: 100%;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 15px;
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-        }
+<!-- Main Form Section -->
+<section style="padding: 40px 20px 80px 20px; max-width: 760px; margin: 0 auto;">
+    
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 36px; box-shadow: 0 4px 20px rgba(0,0,0,0.03);">
+        
+        <?php if (!empty($error_msg)): ?>
+            <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 12px; padding: 16px 20px; color: #991b1b; display: flex; align-items: center; gap: 12px; margin-bottom: 24px;">
+                <i class="fa-solid fa-triangle-exclamation" style="font-size: 18px; color: #ef4444; flex-shrink: 0;"></i>
+                <span style="font-size: 14px; font-weight: 600;"><?php echo htmlspecialchars($error_msg); ?></span>
+            </div>
+        <?php endif; ?>
 
-        h1 {
-            text-align: center;
-            font-size: 1.8rem;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        label {
-            display: block;
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-
-        input[type="text"],
-        input[type="email"],
-        input[type="tel"],
-        select,
-        textarea {
-            width: 96%;
-            padding: 10px;
-            font-size: 1rem;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            border-radius: 8px;
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
-            outline: none;
-        }
-
-        textarea {
-            resize: vertical;
-        }
-
-        button[type="submit"] {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            font-size: 1rem;
-            font-weight: bold;
-            background: linear-gradient(135deg, #00c6ff, #0072ff);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        /* Profile Picture */
-        .profile-pic-preview {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        .profile-pic-preview img {
-            width: 150px;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 4px solid rgba(255, 255, 255, 0.5);
-        }
-
-        select {
-    width: 100%;
-    padding: 10px;
-    font-size: 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    border-radius: 8px;
-    background: rgba(255, 255, 255, 0.2); /* Slightly transparent background */
-    color: #fff; /* White text */
-    outline: none;
-    transition: border-color 0.3s ease, background-color 0.3s ease;
-    -webkit-appearance: none; /* Remove default arrow styling in some browsers */
-    -moz-appearance: none;
-    appearance: none;
-}
-
-select option {
-    background: #1e3c72; /* Dropdown option background color */
-    color: #fff; /* Dropdown option text color */
-}
-
-select:focus {
-    border-color: #00c6ff;
-    background: rgba(255, 255, 255, 0.3);
-}
-
-option:checked {
-    background: #0072ff; /* Selected option background color */
-    color: #fff; /* Selected option text color */
-}
-
-    </style>
-</head>
-<body>
-    <div class="profile-edit-container">
-        <h1>Edit Vendor Profile</h1>
         <form action="" method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label for="profile_picture">Profile Picture:</label>
-                <div class="profile-pic-preview">
-                    <img id="preview" src="../images/vendor_images/<?php echo htmlspecialchars($vendor['vendor_image']); ?>" alt="Profile Picture">
+            
+            <!-- Avatar Upload & Preview -->
+            <div style="text-align: center; margin-bottom: 30px; padding-bottom: 25px; border-bottom: 1px solid #e2e8f0;">
+                <?php 
+                    $v_img = '../images/vendor_images/' . ($vendor['vendor_image'] ?? '');
+                    $avatar_src = (!empty($vendor['vendor_image']) && file_exists($v_img)) ? $v_img : '../images/vendor_images/default.jpg';
+                ?>
+                <img id="vendor-preview" src="<?php echo htmlspecialchars($avatar_src); ?>" alt="Profile Picture" 
+                     style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid #0284c7; box-shadow: 0 4px 14px rgba(2,132,199,0.2); margin-bottom: 14px;" />
+                <div>
+                    <label for="profile_picture" style="background: #e0f2fe; color: #0284c7; padding: 8px 18px; border-radius: 50px; font-size: 13.5px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-camera"></i> Change Photo
+                    </label>
+                    <input type="file" id="profile_picture" name="profile_picture" accept="image/*" style="display: none;" onchange="previewVendorImage(this);">
+                    <p style="font-size: 12px; color: #94a3b8; margin: 6px 0 0 0;">JPG, PNG, WEBP (Max 2MB)</p>
                 </div>
-                <input type="file" id="profile_picture" name="profile_picture" accept="image/*" onchange="previewImage(event)">
             </div>
 
-            <div class="form-group">
-                <label for="name">Full Name:</label>
-                <input type="text" id="name" name="name" value="<?php echo htmlspecialchars($vendor['vendor_name']); ?>" required>
+            <!-- Full Name & Contact -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                <div>
+                    <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                        Specialist Name <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="text" name="name" value="<?php echo htmlspecialchars($vendor['full_name'] ?? ''); ?>" required
+                           style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit;">
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                        Contact Phone <span style="color: #ef4444;">*</span>
+                    </label>
+                    <input type="tel" name="phone" value="<?php echo htmlspecialchars($vendor['contact_no'] ?? ''); ?>" required
+                           style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit;">
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="email">Email Address:</label>
-                <input type="email" id="email" name="email" value="<?php echo htmlspecialchars($vendor['email']); ?>" required>
+            <div style="margin-bottom: 18px;">
+                <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                    Registered Email <span style="color: #ef4444;">*</span>
+                </label>
+                <input type="email" name="email" value="<?php echo htmlspecialchars($vendor['email'] ?? ''); ?>" required
+                       style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit;">
             </div>
 
-            <div class="form-group">
-                <label for="phone">Phone Number:</label>
-                <input type="tel" id="phone" name="phone" value="<?php echo htmlspecialchars($vendor['contact_number']); ?>" required>
+            <!-- District & Town Selection -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                <div>
+                    <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                        District
+                    </label>
+                    <select id="district_select" name="district_id" onchange="loadVendorTowns(this.value);"
+                            style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit; background: #ffffff;">
+                        <option value="">Select District</option>
+                        <?php foreach ($districts as $d): ?>
+                            <option value="<?php echo $d['id']; ?>" <?php echo ($d['id'] == $vendor['district_id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($d['district_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                        Service Town / Primary Base
+                    </label>
+                    <select id="town_select" name="town_id"
+                            style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit; background: #ffffff;">
+                        <option value="">Select Town</option>
+                        <?php foreach ($towns as $t): ?>
+                            <option value="<?php echo $t['id']; ?>" <?php echo ($t['id'] == $vendor['town_id']) ? 'selected' : ''; ?>>
+                                <?php echo htmlspecialchars($t['town_name']); ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
             </div>
 
-            <div class="form-group">
-    <label for="district_id">Select District:</label>
-    <select id="district_id" name="district_id" required>
-        <option value="">Select District</option>
-        <?php
-        $district_query = "SELECT * FROM tbl_districts";
-        $district_result = mysqli_query($conn, $district_query);
-        while ($district = mysqli_fetch_assoc($district_result)) {
-            $selected = $district['id'] == $vendor['district_id'] ? 'selected' : '';
-            echo "<option value=\"{$district['id']}\" $selected>{$district['district_name']}</option>";
-        }
-        ?>
-    </select>
-</div>
+            <!-- Experience & Working Hours -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px;">
+                <div>
+                    <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                        Years of Experience
+                    </label>
+                    <input type="text" name="experience" value="<?php echo htmlspecialchars($vendor['experience'] ?? ''); ?>" placeholder="e.g. 7 Years"
+                           style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit;">
+                </div>
 
-<div class="form-group">
-    <label for="town_id">Select Town:</label>
-    <select id="town_id" name="town_id" required>
-        <option value="">Select Town</option>
-        <?php
-        $town_query = "SELECT * FROM tbl_towns WHERE district_id = '{$vendor['district_id']}'";
-        $town_result = mysqli_query($conn, $town_query);
-        while ($town = mysqli_fetch_assoc($town_result)) {
-            $selected = $town['id'] == $vendor['town_id'] ? 'selected' : '';
-            echo "<option value=\"{$town['id']}\" $selected>{$town['town_name']}</option>";
-        }
-        ?>
-    </select>
-</div>
-
-
-            <div class="form-group">
-                <label for="experience">Experience:</label>
-                <input type="text" id="experience" name="experience" value="<?php echo htmlspecialchars($vendor['experience']); ?>" required>
+                <div>
+                    <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                        Availability &amp; Hours
+                    </label>
+                    <input type="text" name="available_times" value="<?php echo htmlspecialchars($vendor['available_dates_and_times'] ?? ''); ?>" placeholder="e.g. Mon-Sat 8:00 AM - 6:00 PM"
+                           style="width: 100%; box-sizing: border-box; padding: 12px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit;">
+                </div>
             </div>
 
-            <div class="form-group">
-                <label for="about_you">About You:</label>
-                <textarea id="about_you" name="about_you" rows="4" required><?php echo htmlspecialchars($vendor['about_you']); ?></textarea>
+            <!-- About / Bio -->
+            <div style="margin-bottom: 28px;">
+                <label style="display: block; font-size: 13.5px; font-weight: 700; color: #334155; margin-bottom: 7px;">
+                    Professional Bio &amp; Specialty Equipment
+                </label>
+                <textarea name="about_you" rows="4" placeholder="Briefly describe your specialization, equipment, and warranty commitments..."
+                          style="width: 100%; box-sizing: border-box; padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 10px; font-size: 14.5px; outline: none; font-family: inherit; line-height: 1.6; resize: vertical;"><?php echo htmlspecialchars($vendor['about_you'] ?? ''); ?></textarea>
             </div>
 
-            <div class="form-group">
-                <button type="submit" name="update">Update Profile</button>
+            <!-- Submit Buttons -->
+            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;">
+                <button type="submit" name="submit_update" style="background: #0284c7; color: #ffffff; border: none; padding: 12px 30px; font-size: 15px; font-weight: 700; border-radius: 50px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Profile Changes
+                </button>
+                <a href="profile.php" style="color: #64748b; font-size: 14px; text-decoration: none; font-weight: 600;">
+                    Cancel &amp; Return
+                </a>
             </div>
+
         </form>
+
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</section>
+
 <script>
-    $(document).ready(function () {
-        $('#district_id').on('change', function () {
-            const districtId = $(this).val();
-            if (districtId) {
-                $.ajax({
-                    url: 'get_towns.php', // The PHP file to handle the request
-                    type: 'POST',
-                    data: { district_id: districtId },
-                    success: function (response) {
-                        $('#town_id').html(response); // Update the town dropdown
-                    },
-                    error: function () {
-                        alert('Failed to fetch towns. Please try again.');
-                    }
-                });
-            } else {
-                $('#town_id').html('<option value="">Select Town</option>'); // Reset town dropdown
-            }
+function previewVendorImage(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('vendor-preview').src = e.target.result;
+        }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function loadVendorTowns(districtId) {
+    var townSelect = document.getElementById('town_select');
+    townSelect.innerHTML = '<option value="">Loading towns...</option>';
+    if (!districtId) {
+        townSelect.innerHTML = '<option value="">Select Town</option>';
+        return;
+    }
+    fetch('get_towns.php?district_id=' + districtId)
+        .then(response => response.json())
+        .then(data => {
+            townSelect.innerHTML = '<option value="">Select Town</option>';
+            data.forEach(function(item) {
+                var opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.town_name;
+                townSelect.appendChild(opt);
+            });
+        })
+        .catch(err => {
+            townSelect.innerHTML = '<option value="">Failed to load towns</option>';
         });
-    });
+}
 </script>
+
+<?php
+include('./partials/footer.php');
+?>
