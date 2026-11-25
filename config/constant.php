@@ -26,11 +26,12 @@ if (!defined('SITEURL')) {
 
 // Database configuration: Supports Environment Variables for Vercel & cloud DBs
 if (!defined('LOCALHOST')) {
-    $db_host = getenv('DB_HOST') ?: getenv('LOCALHOST') ?: 'localhost';
-    $db_user = getenv('DB_USERNAME') ?: 'fixnow';
-    $db_pass = getenv('DB_PASSWORD') ?: 'mysql';
-    $db_name = getenv('DB_NAME') ?: 'fixnow';
-    $db_port = getenv('DB_PORT') ? intval(getenv('DB_PORT')) : 3306;
+    $db_host = $_ENV['DB_HOST'] ?? $_SERVER['DB_HOST'] ?? getenv('DB_HOST') ?: (getenv('LOCALHOST') ?: 'localhost');
+    $db_user = $_ENV['DB_USERNAME'] ?? $_SERVER['DB_USERNAME'] ?? getenv('DB_USERNAME') ?: 'fixnow';
+    $db_pass = $_ENV['DB_PASSWORD'] ?? $_SERVER['DB_PASSWORD'] ?? getenv('DB_PASSWORD') ?: 'mysql';
+    $db_name = $_ENV['DB_NAME'] ?? $_SERVER['DB_NAME'] ?? getenv('DB_NAME') ?: 'fixnow';
+    $raw_port = $_ENV['DB_PORT'] ?? $_SERVER['DB_PORT'] ?? getenv('DB_PORT');
+    $db_port = (!empty($raw_port)) ? intval($raw_port) : 3306;
 
     define('LOCALHOST', $db_host);
     define('DB_USERNAME', $db_user);
@@ -41,42 +42,79 @@ if (!defined('LOCALHOST')) {
 
 // Establish database connection if not already connected
 if (!isset($conn) || !($conn instanceof mysqli)) {
+    $db_conn_error = '';
     try {
         if (LOCALHOST === 'localhost' || LOCALHOST === '127.0.0.1') {
-            $conn = mysqli_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306);
+            $conn = @mysqli_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306);
+            if (!$conn) {
+                $db_conn_error = mysqli_connect_error();
+            }
         } else {
             // Cloud MySQL / TiDB requires SSL connection
             $conn = mysqli_init();
-            if (defined('MYSQLI_OPT_SSL_VERIFY_SERVER_CERT')) {
-                $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+            if ($conn) {
+                if (defined('MYSQLI_OPT_SSL_VERIFY_SERVER_CERT')) {
+                    $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
+                }
+                if (defined('MYSQLI_OPT_CONNECT_TIMEOUT')) {
+                    $conn->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
+                }
+                $ssl_flag = defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT') ? MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT : (defined('MYSQLI_CLIENT_SSL') ? MYSQLI_CLIENT_SSL : 0);
+                $connected = @$conn->real_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306, NULL, $ssl_flag);
+                if (!$connected) {
+                    $db_conn_error = $conn->connect_error ?: mysqli_connect_error();
+                    // Fallback to standard connect without SSL flag if provider handles it transparently
+                    $conn = @mysqli_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306);
+                    if (!$conn) {
+                        $db_conn_error = mysqli_connect_error() ?: $db_conn_error;
+                    }
+                }
             }
-            $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
-            $conn->real_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306, NULL, MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT);
         }
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
         $conn = false;
+        $db_conn_error = $e->getMessage();
     }
 
     if (!$conn) {
-        // On Vercel, if DB is not configured, show a helpful setup guide
+        // On Vercel, if DB is not configured, show a helpful setup guide with current status
         if (isset($_SERVER['VERCEL']) || isset($_ENV['VERCEL']) || (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'vercel.app') !== false)) {
+            $safe_host = htmlspecialchars(LOCALHOST);
+            $safe_user = htmlspecialchars(DB_USERNAME);
+            $safe_port = htmlspecialchars(strval(DB_PORT));
+            $safe_name = htmlspecialchars(DB_NAME);
+            $safe_err  = htmlspecialchars($db_conn_error ?: 'Could not establish connection to the specified database host.');
+
             die("
-            <div style='max-width:620px;margin:80px auto;padding:40px;background:#ffffff;border-radius:18px;box-shadow:0 10px 30px rgba(0,0,0,0.1);font-family:-apple-system,BlinkMacSystemFont,sans-serif;border:1px solid #e2e8f0;'>
-                <div style='display:inline-block;padding:8px 16px;background:#e0f2fe;color:#0284c7;border-radius:50px;font-size:13px;font-weight:700;margin-bottom:16px;'>FixNow Vercel Cloud Deployment</div>
-                <h2 style='color:#0f172a;margin-top:0;font-size:24px;'>Connect Your Cloud MySQL Database</h2>
-                <p style='color:#64748b;line-height:1.6;'>FixNow is deployed on Vercel. Because Vercel serverless functions run in the cloud, they require a remote cloud MySQL database (e.g. Aiven, PlanetScale, TiDB, Clever Cloud, or cPanel MySQL).</p>
-                <p style='color:#0f172a;font-weight:700;margin-bottom:8px;'>Configure these Environment Variables in your Vercel Dashboard:</p>
-                <div style='background:#f8fafc;padding:16px;border-radius:10px;font-family:monospace;font-size:13.5px;color:#0369a1;border:1px solid #e2e8f0;line-height:1.8;'>
-                    <strong>DB_HOST</strong> = &lt;your-cloud-db-host&gt;<br>
-                    <strong>DB_USERNAME</strong> = &lt;your-db-username&gt;<br>
-                    <strong>DB_PASSWORD</strong> = &lt;your-db-password&gt;<br>
-                    <strong>DB_NAME</strong> = fixnow<br>
-                    <strong>DB_PORT</strong> = 3306
+            <div style='max-width:680px;margin:60px auto;padding:40px;background:#ffffff;border-radius:18px;box-shadow:0 12px 36px rgba(0,0,0,0.08);font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,sans-serif;border:1px solid #e2e8f0;'>
+                <div style='display:inline-block;padding:6px 14px;background:#fee2e2;color:#dc2626;border-radius:50px;font-size:12.5px;font-weight:700;margin-bottom:14px;'>Database Connection Error</div>
+                <h2 style='color:#0f172a;margin-top:0;font-size:24px;margin-bottom:8px;'>Connect Your Cloud MySQL Database</h2>
+                <p style='color:#64748b;font-size:14px;line-height:1.6;margin-bottom:20px;'>FixNow is running on Vercel. Because Vercel serverless functions run in the cloud, they cannot connect to <code>localhost</code> and require your cloud MySQL credentials (e.g. TiDB Cloud, Aiven, or Railway).</p>
+                
+                <div style='background:#fef2f2;border:1px solid #fecaca;padding:14px 16px;border-radius:10px;margin-bottom:20px;font-size:13px;color:#991b1b;word-break:break-all;'>
+                    <strong>Current Attempt:</strong> Host: <code>{$safe_host}:{$safe_port}</code> | User: <code>{$safe_user}</code> | DB: <code>{$safe_name}</code><br>
+                    <strong>Error:</strong> {$safe_err}
                 </div>
-                <p style='color:#94a3b8;font-size:12.5px;margin-top:14px;margin-bottom:0;'>Navigate to <strong>Project Settings &gt; Environment Variables</strong> in your Vercel Dashboard, add the variables above, and redeploy.</p>
+
+                <div style='background:#f8fafc;padding:18px;border-radius:12px;font-family:monospace;font-size:13px;color:#0369a1;border:1px solid #e2e8f0;line-height:1.9;'>
+                    <strong style='color:#0f172a;'>Required Vercel Environment Variables:</strong><br>
+                    <strong>DB_HOST</strong> = <em>your-cluster-host (e.g. gateway01.us-west-2.prod.aws.tidbcloud.com)</em><br>
+                    <strong>DB_PORT</strong> = <em>4000 (for TiDB) or 3306</em><br>
+                    <strong>DB_USERNAME</strong> = <em>your-cluster-username (e.g. 3PPpaaGaoG3WpuE.root)</em><br>
+                    <strong>DB_PASSWORD</strong> = <em>your-cluster-password</em><br>
+                    <strong>DB_NAME</strong> = fixnow
+                </div>
+
+                <p style='color:#64748b;font-size:13px;margin-top:18px;line-height:1.6;margin-bottom:0;'>
+                    👉 In your Vercel Dashboard, go to <strong>Settings &gt; Environment Variables</strong>, add or update the 5 keys above, then go to the <strong>Deployments</strong> tab, click the <strong>...</strong> menu on the latest deployment, and click <strong>Redeploy</strong>.
+                </p>
             </div>
             ");
         }
+        header('Location: ' . SITEURL . 'error.php?message=database_connection_failed');
+        exit(); 
+    }
+}
         header('Location: ' . SITEURL . 'error.php?message=database_connection_failed');
         exit(); 
     }
