@@ -120,5 +120,3 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
     }
 }
 
-// Include parameterized DB helper functions
-require_once __DIR__ . '/db_helper.php';
