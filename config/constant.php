@@ -115,10 +115,6 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
         exit(); 
     }
 }
-        header('Location: ' . SITEURL . 'error.php?message=database_connection_failed');
-        exit(); 
-    }
-}
 
 // Include parameterized DB helper functions
 require_once __DIR__ . '/db_helper.php';
