@@ -53,21 +53,28 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
             // Cloud MySQL / TiDB requires SSL connection
             $conn = mysqli_init();
             if ($conn) {
+                if (defined('MYSQLI_OPT_CONNECT_TIMEOUT')) {
+                    $conn->options(MYSQLI_OPT_CONNECT_TIMEOUT, 15);
+                }
+                // ssl_set must be called to activate TLS/SSL in mysqli
+                $conn->ssl_set(NULL, NULL, NULL, NULL, NULL);
                 if (defined('MYSQLI_OPT_SSL_VERIFY_SERVER_CERT')) {
                     $conn->options(MYSQLI_OPT_SSL_VERIFY_SERVER_CERT, false);
                 }
-                if (defined('MYSQLI_OPT_CONNECT_TIMEOUT')) {
-                    $conn->options(MYSQLI_OPT_CONNECT_TIMEOUT, 10);
-                }
-                $ssl_flag = defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT') ? MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT : (defined('MYSQLI_CLIENT_SSL') ? MYSQLI_CLIENT_SSL : 0);
-                $connected = @$conn->real_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306, NULL, $ssl_flag);
+
+                $connected = @$conn->real_connect(
+                    LOCALHOST, 
+                    DB_USERNAME, 
+                    DB_PASSWORD, 
+                    DB_NAME, 
+                    defined('DB_PORT') ? DB_PORT : 4000, 
+                    NULL, 
+                    MYSQLI_CLIENT_SSL
+                );
+
                 if (!$connected) {
                     $db_conn_error = $conn->connect_error ?: mysqli_connect_error();
-                    // Fallback to standard connect without SSL flag if provider handles it transparently
-                    $conn = @mysqli_connect(LOCALHOST, DB_USERNAME, DB_PASSWORD, DB_NAME, defined('DB_PORT') ? DB_PORT : 3306);
-                    if (!$conn) {
-                        $db_conn_error = mysqli_connect_error() ?: $db_conn_error;
-                    }
+                    $conn = false;
                 }
             }
         }
